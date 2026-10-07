@@ -2,15 +2,14 @@
 // live model, theme, and the advisor drawer.
 import { api, state, onLiveChange } from "./api.js";
 import { h, ICONS, toast, hideTip } from "./ui.js";
-import { initEffects } from "./effects.js";
 import { mountChat, rerenderChats } from "./chat.js";
 
 const VIEWS = [
-  { id: "overview", title: "Overview", sub: "Your customer journey at a glance, from the live model", icon: "overview", group: "Insight" },
+  { id: "overview", title: "Overview", sub: "The customer journey at a glance", icon: "overview", group: "Insight" },
   { id: "journey", title: "Journey map", sub: "Transition probabilities between every stage", icon: "journey", group: "Insight" },
-  { id: "adaptive", title: "Adaptive engine", sub: "How the matrix re-learns each month — drift tests and per-stage update weights", icon: "adaptive", group: "Insight", tag: "Novel" },
-  { id: "whatif", title: "What-if simulator", sub: "Test a change before you build it — on the live matrix, next to the frozen snapshot", icon: "whatif", group: "Decide", tag: "Live" },
-  { id: "optimize", title: "Budget optimiser", sub: "Where a limited improvement budget earns the most", icon: "optimize", group: "Decide", tag: "Live" },
+  { id: "adaptive", title: "Adaptive engine", sub: "Drift tests and per-stage update weights, month by month", icon: "adaptive", group: "Insight" },
+  { id: "whatif", title: "What-if simulator", sub: "Test a change on the live model, next to the frozen snapshot", icon: "whatif", group: "Decide" },
+  { id: "optimize", title: "Budget optimiser", sub: "Where a limited improvement budget earns the most", icon: "optimize", group: "Decide" },
   { id: "actions", title: "Next best actions", sub: "What moves customers at each stage forward", icon: "actions", group: "Decide" },
   { id: "predict", title: "Prediction", sub: "Where a customer is likely to be in k steps", icon: "predict", group: "Decide" },
   { id: "advisor", title: "AI advisor", sub: "Ask business questions in plain words", icon: "advisor", group: "Decide" },
@@ -31,8 +30,8 @@ const viewEl = document.getElementById("view");
 
 // ---------------------------------------------------------------- theme
 function initTheme() {
-  let t = "dark";
-  try { t = localStorage.getItem("jp-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); } catch { /* storage blocked */ }
+  let t = "light";
+  try { t = localStorage.getItem("jp-theme") || t; } catch { /* storage blocked */ }
   document.documentElement.dataset.theme = t;
   document.getElementById("theme-btn").addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -56,13 +55,8 @@ function buildNav() {
   nav.addEventListener("click", () => document.querySelector(".sidebar").classList.remove("open"));
 }
 
-function moveLiquid(id) {
-  const a = document.querySelector(`.nav a[data-view="${id}"]`);
-  const blob = document.querySelector(".nav-liquid");
-  document.querySelectorAll(".nav a").forEach((x) => x.classList.toggle("active", x === a));
-  if (!a || !blob) return;
-  blob.style.transform = `translateY(${a.offsetTop - 2}px)`;
-  blob.style.height = `${a.offsetHeight + 4}px`;
+function markActive(id) {
+  document.querySelectorAll(".nav a").forEach((x) => x.classList.toggle("active", x.dataset.view === id));
 }
 
 // ---------------------------------------------------------------- routing
@@ -78,7 +72,7 @@ async function renderView(id, { keepScroll = false } = {}) {
   document.getElementById("page-title").textContent = v.title;
   document.getElementById("page-sub").textContent = v.sub;
   document.title = `${v.title} · JourneyPulse`;
-  moveLiquid(id);
+  markActive(id);
   const y = window.scrollY;
   const changed = current !== id;
   current = id;
@@ -93,7 +87,7 @@ async function renderView(id, { keepScroll = false } = {}) {
     if (token !== renderToken) { if (typeof maybe === "function") maybe(); return; }
     cleanup = typeof maybe === "function" ? maybe : null;
     viewEl.replaceChildren(fresh);
-    if (changed) { fresh.classList.add("enter"); viewEl.focus({ preventScroll: true }); }
+    if (changed) viewEl.focus({ preventScroll: true });
     window.scrollTo(0, keepScroll || !changed ? y : 0);
   } catch (err) {
     console.error(err);
@@ -109,13 +103,12 @@ function paintLive(live) {
   document.getElementById("live-version").textContent = `v${live.version}`;
   document.getElementById("live-label").textContent = live.label;
   const pill = document.getElementById("live-pill");
-  pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump");
   document.querySelectorAll("[data-stream]").forEach((b) => {
     const a = b.dataset.stream;
     b.disabled = (a === "next" || a === "latest") ? live.version >= live.latest : live.version <= 0;
   });
   const nt = document.querySelector(".next-text");
-  if (nt) nt.textContent = live.version >= live.latest ? "Up to date" : "Stream next month";
+  if (nt) nt.textContent = live.version >= live.latest ? "Up to date" : "Next month";
 }
 
 function initStream() {
@@ -185,7 +178,6 @@ function initDrawer() {
 async function main() {
   initTheme();
   buildNav();
-  initEffects();
   initStream();
   initDrawer();
   try {
@@ -197,7 +189,6 @@ async function main() {
     return;
   }
   window.addEventListener("hashchange", route);
-  window.addEventListener("resize", () => moveLiquid(current));
   window.addEventListener("scroll", hideTip, { passive: true });
   route();
 }

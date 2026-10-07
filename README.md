@@ -91,17 +91,16 @@ journeypulse/
 │       ├── workspace.py          one live model per dataset; every analysis reads its live matrix
 │       └── advisor.py            AI advisor: Claude tool-use loop over HTTPS + offline analyst
 ├── frontend/                     no build step, no external libraries (works offline)
-│   ├── index.html                app shell, liquid-glass SVG filter, sidebar, top bar, advisor drawer
+│   ├── index.html                app shell, sidebar, top bar, advisor drawer
 │   ├── css/
 │   │   ├── tokens.css            colour tokens for dark and light themes (validated chart palette)
-│   │   ├── base.css              layout, ambient background, cursor ring, responsive rules
-│   │   ├── glass.css             glass panels (cursor-tracked sheen), buttons, sliders, chat, tables
+│   │   ├── base.css              layout, app shell, responsive rules
+│   │   ├── components.css        flat cards, buttons, sliders, chat, tables
 │   │   └── views.css             per-page layouts and chart styles
 │   └── js/
 │       ├── app.js                routing, navigation, dataset switch, streaming months, theme
 │       ├── api.js                fetch wrapper + shared state (the live matrix version)
-│       ├── effects.js            cursor ring/glow, sheen, magnetic buttons, parallax, glass orbs
-│       ├── hero.js               live journey field (canvas particle simulation from the live matrix)
+│       ├── effects.js            headline number count-up (the only animation)
 │       ├── charts.js             dependency-free bar, line, heatmap and stacked-column charts
 │       ├── chat.js               advisor conversation (drawer + full page)
 │       ├── ui.js, format.js      safe DOM helpers, markdown subset, number formats
@@ -187,6 +186,5 @@ The suite includes a regression test for every bug fixed from the mid-review cod
 - **Electronics missing from the Dataset menu** — the file must be exactly `data/raw/electronics/events.csv`.
 - **Port in use** — `set PORT=9000` (PowerShell `$env:PORT=9000`) then start again.
 - **Numbers look stale after editing preprocessing** — delete `data/processed/` to rebuild the cache.
-- **Glass looks flat in Firefox/Safari** — the cursor lens uses an SVG refraction filter that only Chromium browsers (Chrome, Edge) support; others fall back to blur.
 
 Data: REES46 Marketing Platform (rees46.com), via Kaggle (mkechinov). Please keep this attribution in the report.

@@ -4,7 +4,6 @@
 import { api, state, lever } from "../api.js";
 import { h, liveBadge, frozenBadge, tile, deltaSpan, card } from "../ui.js";
 import { pct, money, signedPct } from "../format.js";
-import { JourneyField } from "../hero.js";
 import { countTo } from "../effects.js";
 import { lineChart, hbars } from "../charts.js";
 
@@ -12,34 +11,21 @@ export async function render(root) {
   const [o, t] = await Promise.all([api("/api/overview"), api("/api/timeline")]);
   const k = o.kpis, f = o.frozen_kpis, live = o.live;
 
-  // ---------------------------------------------------------------- hero
-  const canvas = h("canvas", { class: "field", "aria-label": "Animated customer journey sampled from the live transition matrix" });
-  const lens = h("div", { class: "lens", "aria-hidden": "true" });
+  // ---------------------------------------------------------------- intro
   const heroNum = h("span", { class: "hero-num" }, "0");
-  const simFirst = h("strong", {}, "–"), simCount = h("strong", {}, "0"), simLoyal = h("strong", {}, "–");
   const gap = (k.revenue_per_1k - f.revenue_per_1k) / f.revenue_per_1k;
-
-  const hero = h("section", { class: "glass hero" },
-    h("div", { class: "hero-copy" },
-      h("div", { class: "row gap8 wrap" }, liveBadge(), h("span", { class: "eyebrow" }, o.dataset_label)),
-      h("h2", { class: "hero-title" }, "A customer-journey model that ", h("span", { class: "grad" }, "re-learns itself"), " every month."),
-      h("p", { class: "soft" }, "Each glowing dot is a simulated customer moving through your store. Its next step is drawn from the ",
-        h("strong", {}, "live"), " transition matrix — the one that just absorbed ", live.label,
-        ". The what-if simulator, the optimiser and the AI advisor all read this same live matrix, never a frozen snapshot."),
-      h("div", { class: "hero-figure" },
-        h("span", { class: "label" }, "Expected revenue per 1,000 visitors"),
-        heroNum,
-        h("span", { class: "delta" }, deltaSpan(gap, (x) => signedPct(x).replace("+", "")),
-          h("span", { class: "muted" }, ` vs frozen ${live.frozen_label} model (${money(f.revenue_per_1k)})`))),
-      h("div", { class: "row gap8 wrap" },
-        h("a", { class: "btn btn-primary", href: "#/whatif", "data-magnetic": "" }, "Run a what-if"),
-        h("a", { class: "btn", href: "#/adaptive" }, "See how it adapts"))),
-    h("div", { class: "hero-field" }, canvas, lens,
-      h("div", { class: "sim-stats glass" },
-        h("div", {}, h("span", { class: "tiny muted" }, "Simulated visitors"), simCount),
-        h("div", {}, h("span", { class: "tiny muted" }, "Finished journeys with an order"), simFirst),
-        h("div", {}, h("span", { class: "tiny muted" }, "Maths says"), h("strong", {}, pct(k.p_first_order))),
-        h("div", {}, h("span", { class: "tiny muted" }, "Became loyal"), simLoyal))));
+  const hero = h("section", { class: "intro" },
+    h("div", { class: "row gap8 wrap" }, liveBadge(), h("span", { class: "eyebrow" }, o.dataset_label)),
+    h("h2", { class: "intro-title" }, "Customer journey, re-estimated every month"),
+    h("p", { class: "soft" }, `The model has absorbed ${live.label}. The simulator, optimiser and advisor all read this live matrix, not a frozen snapshot.`),
+    h("div", { class: "intro-figure" },
+      h("span", { class: "label" }, "Expected revenue per 1,000 visitors"),
+      heroNum,
+      h("span", { class: "delta" }, deltaSpan(gap, (x) => signedPct(x).replace("+", "")),
+        h("span", { class: "muted" }, ` vs frozen ${live.frozen_label} model (${money(f.revenue_per_1k)})`))),
+    h("div", { class: "row gap8 wrap" },
+      h("a", { class: "btn btn-primary", href: "#/whatif" }, "Run a what-if"),
+      h("a", { class: "btn", href: "#/adaptive" }, "See how it adapts")));
 
   // ---------------------------------------------------------------- KPI tiles
   const vs = (a, b, fmt) => h("span", {}, deltaSpan(a - b, fmt), h("span", { class: "muted" }, " vs frozen"));
@@ -113,17 +99,7 @@ export async function render(root) {
     yFmt: (v) => money(v, { compact: true }), height: 230,
   });
 
-  // start the field after it is in the DOM
-  const field = new JourneyField(canvas, {
-    onStats: (s) => {
-      simCount.textContent = money(s.spawned);
-      simFirst.textContent = s.finished > 40 ? pct(s.finishedFirst / s.finished) : "–";
-      simLoyal.textContent = s.spawned > 50 ? money(s.loyal) : "–";
-    },
-  });
-  field.setMatrix(o.matrix);
   countTo(heroNum, k.revenue_per_1k, (v) => money(v));
-  return () => field.destroy();
 }
 
 function step(n, title, text, hot = false) {

@@ -1,102 +1,33 @@
 /* ==========================================================================
-   Design tokens. Every colour in the app is one of these. Dark is the default
-   business theme; light is a separately chosen set, not an automatic flip.
-   Chart series colours are the validated reference palette:
+   Design tokens. Flat, neutral, one accent. Light is the default; dark is a
+   separately chosen set. Chart series colours are the validated palette:
      series-1 = live model, series-2 = frozen snapshot, series-3 = month-only data
+   Text is never set in a series colour.
    ========================================================================== */
 :root {
-  color-scheme: dark;
-  --font: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* page + glass */
-  --bg: #060a14;
-  --bg-2: #0a1122;
-  --surface: #131a2c;                 /* effective chart surface under the glass */
-  --glass: rgba(148, 170, 220, 0.075);
-  --glass-strong: rgba(148, 170, 220, 0.12);
-  --glass-edge: rgba(210, 225, 255, 0.14);
-  --glass-edge-hi: rgba(235, 242, 255, 0.34);
-  --glass-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.75), 0 2px 10px -4px rgba(0, 0, 0, 0.5);
-  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(255, 255, 255, 0.02);
-  --sheen: rgba(255, 255, 255, 0.10);
-  --blur: 22px;
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --sunken: #f4f4f2;
+  --line: #e6e5e1;
+  --line-strong: #d3d2cc;
 
-  /* ink */
-  --ink: #f4f7ff;
-  --ink-2: #c3cbe0;
-  --ink-3: #8b95ad;
-  --hair: rgba(200, 215, 245, 0.10);
-  --axis: rgba(200, 215, 245, 0.22);
+  --ink: #141414;
+  --ink-2: #4a4a47;
+  --ink-3: #85847f;
+  --hair: #ececE8;
+  --axis: #cfcec8;
 
-  /* brand (UI chrome only, never data) */
-  --brand-a: #6aa8ff;
-  --brand-b: #27d3b4;
-  --brand-grad: linear-gradient(135deg, #6aa8ff 0%, #4f7dff 45%, #27d3b4 100%);
-  --focus: #8fbaff;
+  --accent: #141414;           /* primary actions: plain ink, no colour */
+  --accent-ink: #ffffff;
+  --link: #1d5fd1;
+  --focus: #1d5fd1;
 
   /* data */
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --series-4: #c98500;
-  --series-5: #d55181;
-  --series-6: #008300;
-  --series-7: #9085e9;
-  --state-visitor: #9085e9;
-  --state-view: #3987e5;
-  --state-cart: #199e70;
-  --state-purchase: #c98500;
-  --state-repeat: #d95926;
-  --state-loyal: #d55181;
-  --state-exit: #5b6478;
-
-  /* sequential blue ramp (heatmap), dark steps: near-zero recedes into the surface */
-  --seq-0: #16213a;
-  --seq-1: #184f95;
-  --seq-2: #1c5cab;
-  --seq-3: #256abf;
-  --seq-4: #3987e5;
-  --seq-5: #6da7ec;
-  --seq-6: #b7d3f6;
-  --div-neg: #e66767;
-  --div-mid: #383835;
-  --div-pos: #3987e5;
-
-  /* status (reserved) */
-  --good: #0ca30c;
-  --warning: #fab219;
-  --serious: #ec835a;
-  --critical: #d03b3b;
-  --up: #3ddc84;
-  --down: #ff7b7b;
-
-  --radius: 22px;
-  --radius-sm: 14px;
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --spring: cubic-bezier(.34, 1.56, .64, 1);
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg: #eef2f9;
-  --bg-2: #e3e9f5;
-  --surface: #f5f7fb;
-  --glass: rgba(255, 255, 255, 0.55);
-  --glass-strong: rgba(255, 255, 255, 0.72);
-  --glass-edge: rgba(255, 255, 255, 0.85);
-  --glass-edge-hi: rgba(255, 255, 255, 1);
-  --glass-shadow: 0 24px 50px -30px rgba(30, 45, 90, 0.35), 0 2px 8px -4px rgba(30, 45, 90, 0.18);
-  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(20, 40, 90, 0.04);
-  --sheen: rgba(255, 255, 255, 0.55);
-
-  --ink: #0d1424;
-  --ink-2: #3f4a63;
-  --ink-3: #6b7590;
-  --hair: rgba(20, 35, 70, 0.10);
-  --axis: rgba(20, 35, 70, 0.22);
-  --focus: #2a63d6;
-
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -112,7 +43,7 @@
   --state-loyal: #e87ba4;
   --state-exit: #9aa3b5;
 
-  --seq-0: #e8eef8;
+  --seq-0: #eef2f8;
   --seq-1: #86b6ef;
   --seq-2: #5598e7;
   --seq-3: #3987e5;
@@ -122,6 +53,66 @@
   --div-neg: #e34948;
   --div-mid: #f0efec;
   --div-pos: #2a78d6;
-  --up: #067a3a;
+
+  /* status (reserved) */
+  --good: #0a8f0a;
+  --warning: #b97a00;
+  --critical: #c62828;
+  --up: #0a7a3a;
   --down: #c62828;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0e;
+  --surface: #151516;
+  --sunken: #1b1b1d;
+  --line: #262628;
+  --line-strong: #38383b;
+
+  --ink: #ececea;
+  --ink-2: #b4b4b0;
+  --ink-3: #82827e;
+  --hair: #232325;
+  --axis: #3a3a3d;
+
+  --accent: #ececea;
+  --accent-ink: #111111;
+  --link: #6da7ec;
+  --focus: #6da7ec;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --state-visitor: #9085e9;
+  --state-view: #3987e5;
+  --state-cart: #199e70;
+  --state-purchase: #c98500;
+  --state-repeat: #d95926;
+  --state-loyal: #d55181;
+  --state-exit: #5b6478;
+
+  --seq-0: #1b2230;
+  --seq-1: #184f95;
+  --seq-2: #1c5cab;
+  --seq-3: #256abf;
+  --seq-4: #3987e5;
+  --seq-5: #6da7ec;
+  --seq-6: #b7d3f6;
+  --div-neg: #e66767;
+  --div-mid: #383835;
+  --div-pos: #3987e5;
+
+  --good: #3dc43d;
+  --warning: #e0a21a;
+  --critical: #ef6a6a;
+  --up: #3ddc84;
+  --down: #ff7b7b;
 }
