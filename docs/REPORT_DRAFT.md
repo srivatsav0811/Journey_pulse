@@ -3,13 +3,13 @@
 **Group 12, 23MAT204 Mathematics for Intelligent Systems 3**
 Team: _(add names and roll numbers)_
 
-> **Status of this draft.** Method, design decisions and the synthetic-data result are final. Numbers marked **[verify]** come from the Electronics reference run recorded in CLAUDE.md and README §5; re-run on the real data and confirm before submitting. §6.2 (Cosmetics) is a placeholder until that dataset has been run.
+> **Status of this draft.** Method, design decisions, the synthetic result and the Electronics results are final: the Electronics numbers were reproduced from the raw REES46 file on 2026-10-07. §6.2 (Cosmetics) is a placeholder until that dataset has been run.
 
 ---
 
 ## 1. Abstract
 
-We model customer journeys on an e-commerce site as a first-order Markov chain over seven states (Visitor, Product View, Add to Cart, Purchase, Repeat Purchase, Loyal Customer, Exit), with Exit absorbing and standing for churn. The transition matrix is not fitted once: it is re-estimated every month, with drift detected by a Holm-corrected two-sample χ² test and the update weight driven by the measured shift. A what-if simulator, a constrained optimiser and an AI advisor all read this live matrix, and the dashboard shows each answer next to what a frozen first-month model would have said. On the REES46 Electronics data the live model forecasts materially different business outcomes from the frozen one (revenue per 1,000 visitors 13,332 vs 10,779 **[verify]**), although the gain in next-step prediction accuracy is small.
+We model customer journeys on an e-commerce site as a first-order Markov chain over seven states (Visitor, Product View, Add to Cart, Purchase, Repeat Purchase, Loyal Customer, Exit), with Exit absorbing and standing for churn. The transition matrix is not fitted once: it is re-estimated every month, with drift detected by a Holm-corrected two-sample χ² test and the update weight driven by the measured shift. A what-if simulator, a constrained optimiser and an AI advisor all read this live matrix, and the dashboard shows each answer next to what a frozen first-month model would have said. On the REES46 Electronics data the live model forecasts materially different business outcomes from the frozen one (revenue per 1,000 visitors 13,332 vs 10,779), although the gain in next-step prediction accuracy is small.
 
 ## 2. Problem and motivation
 
@@ -23,7 +23,7 @@ _(Add the remaining references you reviewed here.)_
 
 ## 4. Data
 
-REES46 Electronics store (Kaggle, mkechinov): 885,129 events, 24 Sep 2020 to 28 Feb 2021 **[verify]**. After removing 655 duplicate rows and 162 rows without a session: 407,237 customers, 490,633 sessions, average order value about 210.5 **[verify]**. Events are view, cart and purchase. Source: REES46 Marketing Platform (rees46.com), via Kaggle.
+REES46 Electronics store (Kaggle, mkechinov): 885,129 events, 24 Sep 2020 to 28 Feb 2021. After removing 655 duplicate rows and 162 rows without a session: 407,237 customers, 490,633 sessions, average order value about 210.5. Events are view, cart and purchase. Source: REES46 Marketing Platform (rees46.com), via Kaggle.
 
 A synthetic dataset with a planted shift (Cart → Purchase moves from 0.35 to 0.50 in February) is used to test that drift detection finds a known change.
 
@@ -64,7 +64,7 @@ Claude uses tool calls into the same engine functions, so every number it quotes
 
 ## 6. Results
 
-### 6.1 Electronics (churn 30 days, loyal at 3 orders) [verify all]
+### 6.1 Electronics (churn 30 days, loyal at 3 orders)
 
 | | Live (v3) | Frozen (v0) |
 |---|---|---|
@@ -75,7 +75,7 @@ Claude uses tool calls into the same engine functions, so every number it quotes
 
 Drift detected: November 2020 in Product View and Purchase; none in December; January 2021 in Product View and Add to Cart. Most of the live–frozen gap comes from the Product View row (fewer product views end in churn: 54% → 49%).
 
-**Held-out January:** next-step accuracy 66.5% vs 58.1% for the most-common-step baseline (47.9% vs 34.9% excluding the trivial first click). Log-loss: adaptive 0.7467, frozen 0.7498, baseline 1.0685.
+**Held-out January:** next-step accuracy 66.5% (frozen 66.1%) vs 58.1% for the most-common-step baseline (47.9% vs 34.9% excluding the trivial first click). Log-loss: adaptive 0.7467, frozen 0.7498, baseline 1.0685.
 
 **Honest reading.** On next-step prediction the adaptive gain over the frozen model is small, because real drift in this store is slow. The larger effect is in forecasts: for a +3-point checkout scenario the frozen model under-states the outcome by about 19%, and for the optimiser's plan it under-states the payoff by about 16%.
 
@@ -95,7 +95,7 @@ First-order (memoryless) assumption. Left-censoring: a customer's first order in
 Keeping the matrix live changes the business forecasts a decision-maker sees, even where next-step accuracy barely moves. The contribution is the integration of a live matrix with simulation, optimisation and advisory, not any single component.
 
 ## 9. Reproducibility
-`python -m backend.server --open`; tests with `python tests/run_tests.py` (38 pass, 1 skipped without the real data). All tunable constants are in `backend/config.py`.
+`python -m backend.server --open`; tests with `python tests/run_tests.py` (39 pass with the Electronics file in `data/raw/electronics/`). All tunable constants are in `backend/config.py`.
 
 ## References
 - Pfeifer, P. E., & Carraway, R. L. (2004). Modeling customer relationships as Markov chains. _Journal of Interactive Marketing_.
