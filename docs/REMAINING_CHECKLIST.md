@@ -9,7 +9,7 @@ Last checked 2026-10-07. Code is complete; 39 tests pass. App runs, the dashboar
 Download "eCommerce events history in cosmetics shop" from Kaggle (the `kz.csv` file you downloaded is a different dataset and cannot be used), put the CSVs in `data/raw/cosmetics/` (it uses a 10% customer sample), run it, and fill in §6.2 of `REPORT_DRAFT.md`. This code path has never been run on real data.
 
 ## 3. Finish the report
-`docs/REPORT_DRAFT.md`: add team names, the extra references, the Cosmetics section, and Keep the Kaggle/REES46 attribution.
+`docs/REPORT_DRAFT.md`: add team names, the extra references, the Cosmetics section, and keep the Kaggle/REES46 attribution.
 
 ## 4. Fix the slides (the deck is not in this folder)
 - Slide 6: "never" → "not found in the reviewed literature"
