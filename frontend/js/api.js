@@ -1,0 +1,44 @@
+// api.js — talks to the Python backend and holds the shared client state.
+// The one piece of state every view depends on is `state.live`: which version
+// of the adaptive matrix is live. When it changes, every view re-renders.
+
+export const state = {
+  dataset: null,      // current dataset name
+  meta: null,         // /api/datasets response (states, levers, objectives...)
+  live: null,         // live tag {version, label, latest, strategy, frozen_label}
+  health: null,
+  chats: {},          // chat history per dataset, shared by drawer and advisor page
+};
+
+const liveListeners = new Set();
+
+export function onLiveChange(fn) {
+  liveListeners.add(fn);
+  return () => liveListeners.delete(fn);
+}
+
+export function setLive(live, info = {}) {
+  const prev = state.live;
+  state.live = live;
+  const changed = !prev || prev.version !== live.version || prev.dataset !== live.dataset || prev.strategy !== live.strategy;
+  if (changed) liveListeners.forEach((fn) => fn(live, prev, info));
+}
+
+export async function api(path, { method = "GET", body, params } = {}) {
+  const url = new URL(path, window.location.origin);
+  const q = { dataset: state.dataset, ...(params || {}) };
+  if (method === "GET") Object.entries(q).forEach(([k, v]) => v != null && url.searchParams.set(k, v));
+  const res = await fetch(url, {
+    method,
+    headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
+    body: method === "POST" ? JSON.stringify({ dataset: state.dataset, ...(body || {}) }) : undefined,
+  });
+  let data;
+  try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (data && data.live_tag) setLive(data.live_tag);
+  if (data && data.live && data.live.version !== undefined && data.live.dataset) setLive(data.live);
+  return data;
+}
+
+export const lever = (id) => state.meta.levers.find((l) => l.id === id);

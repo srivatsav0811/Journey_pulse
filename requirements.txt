@@ -1,0 +1,7 @@
+# Runtime: the server, API and engine use only these three plus the Python standard library.
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+
+# Optional: run the tests with pytest (tests/run_tests.py works without it).
+pytest>=7.0
