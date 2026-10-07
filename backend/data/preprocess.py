@@ -29,6 +29,7 @@ State mapping for REES46 clickstream data (see README "Method"):
 """
 
 import glob
+import os
 import hashlib
 import pickle
 from dataclasses import dataclass, field
@@ -91,7 +92,8 @@ class Dataset:
 # ---------------------------------------------------------------------------
 def _files(name: str) -> List[Path]:
     spec = REGISTRY[name]
-    return sorted(Path(p) for p in glob.glob(str(config.RAW_DIR / spec["pattern"])))
+    # normpath resolves the "../synthetic" pattern even when data/raw/ does not exist (a fresh clone)
+    return sorted(Path(p) for p in glob.glob(os.path.normpath(str(config.RAW_DIR / spec["pattern"]))))
 
 
 def available_datasets() -> List[Dict]:

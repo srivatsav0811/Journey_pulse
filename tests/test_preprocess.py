@@ -100,3 +100,14 @@ def test_real_electronics_data_if_present():
     funnel = tr.a.isin([IDX["Visitor"], IDX["Product View"], IDX["Add to Cart"]])
     assert not tr[funnel].b.isin([IDX["Repeat Purchase"], IDX["Loyal Customer"]]).any()
     assert 150 < ds.aov < 300
+
+
+def test_synthetic_dataset_is_found_without_a_raw_data_folder(tmp_path, monkeypatch):
+    # regression: a fresh clone has no data/raw/, and glob could not resolve "raw/../synthetic"
+    from backend import config
+    from backend.data import preprocess
+    (tmp_path / "synthetic").mkdir()
+    (tmp_path / "synthetic" / "synthetic_customer_events.csv").write_text("x\n")
+    monkeypatch.setattr(config, "RAW_DIR", tmp_path / "raw")          # does not exist
+    files = preprocess._files("synthetic")
+    assert [f.name for f in files] == ["synthetic_customer_events.csv"]
