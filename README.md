@@ -28,10 +28,10 @@ python -m backend.server --open        # or ./run_mac_linux.sh
 
 The synthetic dataset (`data/synthetic/`) is included and always available from the **Dataset** menu in the sidebar.
 
-### Turn on Claude for the AI advisor (optional)
+### Turn on a hosted model for the AI advisor (optional: Groq or Claude)
 
 Without a key the advisor runs as the built-in **offline analyst**: it recognises common business questions and answers them from the same engine calls, so a demo never breaks.
-To use Claude, set an Anthropic API key **before** starting the server:
+To use a hosted model, set `GROQ_API_KEY` (Groq, default model `llama-3.3-70b-versatile`) or `ANTHROPIC_API_KEY` (Claude) **before** starting the server. With both set, Claude is used unless `ADVISOR_PROVIDER=groq`. The examples below use Claude's variable; Groq works the same way:
 
 ```bat
 :: Command Prompt
@@ -45,7 +45,7 @@ python -m backend.server --open
 ```
 
 Or copy `.env.example` to `.env`, paste the key there, and use `run_windows.bat`. Never commit `.env`.
-`ANTHROPIC_MODEL` switches the model (default `claude-haiku-4-5-20251001`). The key stays on the server; the browser never sees it.
+`GROQ_MODEL` / `ANTHROPIC_MODEL` switch the model. The key stays on the server; the browser never sees it.
 If the API call fails for any reason (no internet, bad key), the advisor answers offline and says so.
 
 ### Add the Cosmetics dataset (optional)

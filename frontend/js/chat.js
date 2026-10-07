@@ -66,7 +66,7 @@ export function mountChat(container, { large = false } = {}) {
 function bubble(m) {
   if (m.role === "user") return h("div", { class: "msg user" }, m.content);
   const meta = h("div", { class: "msg-meta" });
-  meta.append(h("span", { class: "tool-chip", title: m.model || "" }, icon("spark"), m.source === "claude" ? `Claude · ${m.model}` : "Offline analyst"));
+  meta.append(h("span", { class: "tool-chip", title: m.model || "" }, icon("spark"), m.source === "claude" ? `Claude · ${m.model}` : m.source === "groq" ? `Groq · ${m.model}` : "Offline analyst"));
   if (m.live_tag) meta.append(h("span", { class: "tool-chip" }, `live v${m.live_tag.version} · ${m.live_tag.label}`));
   (m.tools || []).forEach((t) => meta.append(h("span", { class: "tool-chip" }, icon("tool"), TOOL_NAMES[t.name] || t.name)));
   return h("div", { class: "msg bot" }, markdown(m.content), m.notice ? h("p", { class: "tiny muted" }, m.notice) : null, meta);

@@ -16,12 +16,12 @@ WS = REG.get("synthetic")
 
 def test_offline_advisor_answers_without_api_key():
     # regression: ai_assistant.py built the client at import time and crashed without a key
-    old = config.ANTHROPIC_API_KEY
-    config.ANTHROPIC_API_KEY = ""
+    old = (config.ANTHROPIC_API_KEY, config.GROQ_API_KEY)
+    config.ANTHROPIC_API_KEY = config.GROQ_API_KEY = ""
     try:
         r = advisor.answer(WS, [{"role": "user", "content": "How is my business doing?"}])
     finally:
-        config.ANTHROPIC_API_KEY = old
+        config.ANTHROPIC_API_KEY, config.GROQ_API_KEY = old
     assert r["source"] == "offline" and "Live model v" in r["reply"] and r["suggestions"]
 
 
@@ -119,3 +119,52 @@ def test_http_server_serves_api_and_dashboard():
         assert abs(sum(json.loads(urllib.request.urlopen(req).read())["k_step"].values()) - 1) < 1e-6
     finally:
         httpd.shutdown()
+
+
+def test_groq_tool_loop_runs_tools_on_the_live_matrix():
+    calls = []
+
+    def fake(payload, key):
+        calls.append(payload)
+        if len(calls) == 1:
+            assert payload["messages"][0]["role"] == "system" and payload["tools"][0]["type"] == "function"
+            return {"choices": [{"message": {"content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {"name": "get_business_snapshot", "arguments": "{}"}}]}}]}
+        tool_msg = payload["messages"][-1]
+        assert tool_msg["role"] == "tool" and tool_msg["tool_call_id"] == "c1" and "revenue_per_1k" in tool_msg["content"]
+        return {"choices": [{"message": {"content": "Revenue is **fine**."}}]}
+
+    r = advisor.ask_groq(WS, [{"role": "user", "content": "How are we doing?"}], "gsk_test", fake)
+    assert r["reply"] == "Revenue is **fine**." and r["tools"][0]["name"] == "get_business_snapshot"
+
+
+def test_groq_is_used_when_only_its_key_is_set_and_falls_back_on_failure():
+    old = (config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER)
+    config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER = "", "gsk_test", ""
+    try:
+        assert config.advisor_provider() == "groq"
+
+        def broken(payload, key):
+            raise OSError("no network")
+        # the answer() transport hook is shared by both providers
+        r = advisor.answer(WS, [{"role": "user", "content": "Where are we losing customers?"}], transport=broken)
+        assert r["source"] == "offline" and "Groq unavailable" in r["notice"]
+
+        ok = lambda payload, key: {"choices": [{"message": {"content": "All good."}}]}
+        r = advisor.answer(WS, [{"role": "user", "content": "Hi"}], transport=ok)
+        assert r["source"] == "groq" and r["model"] == config.GROQ_MODEL
+    finally:
+        config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER = old
+
+
+def test_provider_selection_prefers_claude_unless_overridden():
+    old = (config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER)
+    try:
+        config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER = "a", "g", ""
+        assert config.advisor_provider() == "claude"
+        config.ADVISOR_PROVIDER = "groq"
+        assert config.advisor_provider() == "groq"
+        config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER = "", "", "groq"
+        assert config.advisor_provider() == "offline"
+    finally:
+        config.ANTHROPIC_API_KEY, config.GROQ_API_KEY, config.ADVISOR_PROVIDER = old

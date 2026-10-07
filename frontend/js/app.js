@@ -155,9 +155,10 @@ async function initAdvisorMode() {
     state.health = await api("/api/health");
     const el = document.getElementById("advisor-mode");
     el.classList.add(state.health.advisor_mode);
-    el.lastChild.textContent = state.health.advisor_mode === "claude" ? `Advisor: Claude (${state.health.model})` : "Advisor: offline analyst";
-    document.getElementById("drawer-mode").textContent = state.health.advisor_mode === "claude"
-      ? "Claude, with tools that compute on the live matrix" : "Offline analyst · set ANTHROPIC_API_KEY for Claude";
+    const name = { claude: "Claude", groq: "Groq" }[state.health.advisor_mode];
+    el.lastChild.textContent = name ? `Advisor: ${name} (${state.health.model})` : "Advisor: offline analyst";
+    document.getElementById("drawer-mode").textContent = name
+      ? `${name}, with tools that compute on the live matrix` : "Offline analyst · set GROQ_API_KEY or ANTHROPIC_API_KEY";
   } catch { /* shown by the view error instead */ }
 }
 

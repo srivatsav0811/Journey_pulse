@@ -63,8 +63,8 @@ def _stage(value, allow_exit=False):
 
 
 def health(reg, q, b):
-    return {"ok": True, "advisor_mode": "claude" if config.ANTHROPIC_API_KEY else "offline",
-            "model": config.ANTHROPIC_MODEL if config.ANTHROPIC_API_KEY else None}
+    provider = config.advisor_provider()
+    return {"ok": True, "advisor_mode": provider, "model": config.advisor_model(provider)}
 
 
 def datasets(reg, q, b):

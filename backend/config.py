@@ -41,9 +41,31 @@ GRID_STEP = 0.01         # brute-force verification step for the optimiser
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Which hosted model answers: "claude" or "groq". Default: Claude if its key is set, else Groq.
+ADVISOR_PROVIDER = os.environ.get("ADVISOR_PROVIDER", "").lower()
 ADVISOR_TIMEOUT_SECONDS = 25
 ADVISOR_MAX_TOOL_ROUNDS = 5
 
 # --- Server ------------------------------------------------------------------
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
+
+
+def advisor_provider() -> str:
+    """"claude", "groq", or "offline" (no key set). Read at call time so tests can patch the keys."""
+    if ADVISOR_PROVIDER == "groq" and GROQ_API_KEY:
+        return "groq"
+    if ADVISOR_PROVIDER == "claude" and ANTHROPIC_API_KEY:
+        return "claude"
+    if ANTHROPIC_API_KEY:
+        return "claude"
+    if GROQ_API_KEY:
+        return "groq"
+    return "offline"
+
+
+def advisor_model(provider: str):
+    return {"claude": ANTHROPIC_MODEL, "groq": GROQ_MODEL}.get(provider)

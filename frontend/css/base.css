@@ -53,7 +53,7 @@ svg { display: block; }
 .sidebar-foot { padding: 12px 10px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .advisor-mode { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
 .advisor-mode .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); }
-.advisor-mode.claude .dot { background: var(--good); }
+.advisor-mode.claude .dot, .advisor-mode.groq .dot { background: var(--good); }
 .advisor-mode.offline .dot { background: var(--warning); }
 
 .main .topbar { display: flex; align-items: center; gap: 16px; padding: 14px 32px; position: sticky; top: 0; z-index: 15;

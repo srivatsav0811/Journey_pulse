@@ -11,7 +11,7 @@ Two modes, same response shape:
                 never sees or invents a probability it did not get from a tool.
   * "offline" - a deterministic analyst that recognises common business
                 questions and answers them from the same engine calls.
-                Used when there is no ANTHROPIC_API_KEY, no network, or the
+                Used when there is no ANTHROPIC_API_KEY or GROQ_API_KEY, no network, or the
                 API call fails, so a live demo never breaks.
 
 The API key is read from the environment only and never sent to the browser.
@@ -205,6 +205,51 @@ def ask_claude(ws, history: List[Dict], api_key: str,
                 results.append({"type": "tool_result", "tool_use_id": block["id"],
                                 "content": f"error: {exc}", "is_error": True})
         messages.append({"role": "user", "content": results})
+    raise RuntimeError("too many tool rounds")
+
+
+def _post_groq(payload: Dict, api_key: str) -> Dict:
+    req = urllib.request.Request(
+        config.GROQ_URL, data=json.dumps(payload).encode(), method="POST",
+        headers={"Authorization": f"Bearer {api_key}", "content-type": "application/json",
+                 "User-Agent": "JourneyPulse/1.0"})   # Groq sits behind a CDN that rejects the default urllib agent
+    with urllib.request.urlopen(req, timeout=config.ADVISOR_TIMEOUT_SECONDS) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _openai_tools() -> List[Dict]:
+    return [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                              "parameters": t["input_schema"]}} for t in TOOLS]
+
+
+def ask_groq(ws, history: List[Dict], api_key: str,
+             transport: Optional[Callable[[Dict, str], Dict]] = None) -> Dict:
+    """Same tool-use loop over Groq's OpenAI-compatible chat API."""
+    transport = transport or _post_groq
+    messages = [{"role": "system", "content": system_prompt(ws)}]
+    messages += [{"role": m["role"], "content": m["content"]} for m in history if m.get("content")]
+    tools = _openai_tools()
+    used = []
+    for _ in range(config.ADVISOR_MAX_TOOL_ROUNDS + 1):
+        resp = transport({"model": config.GROQ_MODEL, "max_tokens": 900, "temperature": 0.2,
+                          "tools": tools, "tool_choice": "auto", "messages": messages}, api_key)
+        msg = resp["choices"][0]["message"]
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            return {"reply": (msg.get("content") or "").strip(), "tools": used}
+        messages.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
+        for call in calls:
+            name = call["function"]["name"]
+            try:
+                args = json.loads(call["function"].get("arguments") or "{}")
+            except ValueError:
+                args = {}
+            used.append({"name": name, "input": args})
+            try:
+                out = json.dumps(run_tool(ws, name, args))
+            except Exception as exc:  # report tool errors back to the model rather than crashing
+                out = f"error: {exc}"
+            messages.append({"role": "tool", "tool_call_id": call["id"], "content": out})
     raise RuntimeError("too many tool rounds")
 
 
@@ -435,23 +480,28 @@ def _suggest(intent: str) -> List[str]:
 def answer(ws, history: List[Dict], transport=None) -> Dict:
     """
     history: [{"role": "user"|"assistant", "content": str}, ...], last one from the user.
-    Always returns a reply; Claude is tried first when a key is configured.
+    Always returns a reply; the hosted model (Claude or Groq) is tried first when a key is configured.
     """
     if not history or history[-1].get("role") != "user":
         raise ValueError("history must end with a user message")
     question = str(history[-1]["content"])[:2000]
     intent = offline_answer_intent(question)
     base = {"live_tag": ws.live_tag(), "suggestions": _suggest(intent)}
-    key = config.ANTHROPIC_API_KEY
-    if key or transport:
+    provider = config.advisor_provider()
+    if provider == "offline" and transport:
+        provider = "claude"              # tests inject a fake transport without a key
+    if provider != "offline":
+        ask = ask_groq if provider == "groq" else ask_claude
+        key = config.GROQ_API_KEY if provider == "groq" else config.ANTHROPIC_API_KEY
+        label = "Groq" if provider == "groq" else "Claude"
         try:
-            out = ask_claude(ws, history[-12:], key, transport)
+            out = ask(ws, history[-12:], key, transport)
             if out["reply"]:
-                return {**base, **out, "source": "claude", "model": config.ANTHROPIC_MODEL}
+                return {**base, **out, "source": provider, "model": config.advisor_model(provider)}
         except Exception as exc:  # any failure (network, auth, bad reply) falls back so the demo never breaks
             fallback = offline_answer(ws, question)
             return {**base, **fallback, "source": "offline", "model": "offline analyst",
-                    "notice": f"Claude unavailable ({type(exc).__name__}); answered offline."}
+                    "notice": f"{label} unavailable ({type(exc).__name__}); answered offline."}
     out = offline_answer(ws, question)
     return {**base, **out, "source": "offline", "model": "offline analyst"}
 
