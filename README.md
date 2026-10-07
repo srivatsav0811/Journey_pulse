@@ -31,7 +31,7 @@ The synthetic dataset (`data/synthetic/`) is included and always available from 
 ### Turn on a hosted model for the AI advisor (optional: Groq or Claude)
 
 Without a key the advisor runs as the built-in **offline analyst**: it recognises common business questions and answers them from the same engine calls, so a demo never breaks.
-To use a hosted model, set `GROQ_API_KEY` (Groq, default model `llama-3.3-70b-versatile`) or `ANTHROPIC_API_KEY` (Claude) **before** starting the server. With both set, Claude is used unless `ADVISOR_PROVIDER=groq`. The examples below use Claude's variable; Groq works the same way:
+To use a hosted model, set `GROQ_API_KEY` (Groq, default model `openai/gpt-oss-120b`) or `ANTHROPIC_API_KEY` (Claude) **before** starting the server. With both set, Claude is used unless `ADVISOR_PROVIDER=groq`. The examples below use Claude's variable; Groq works the same way:
 
 ```bat
 :: Command Prompt
