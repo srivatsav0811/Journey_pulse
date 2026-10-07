@@ -63,6 +63,11 @@ Exit row all zeros, negative probabilities from unclamped shifts.
 - Held-out Jan: accuracy 66.5% vs baseline 58.1%; log-loss adaptive 0.7467, frozen 0.7498, baseline 1.0685.
 - Synthetic: drift only in Add to Cart at batch 2 (Feb 1–7), α 0.80; live Cart→Purchase ends 52.9% (truth 50%).
 
+- **Cosmetics (10% customer sample, churn 30d, loyalty 3), run 2026-10-07:** 2,061,436 rows; 108,484 duplicates + 404 null-session removed; 164,284 customers; 455,341 sessions; 1,415,837 of 1,719,295 transitions used; batches Oct 2019 · Nov 2019 · Dec 2019 · Jan 2020; AOV ≈ 40.61.
+  Live (v3) vs frozen (v0): revenue per 1k visitors 4,560 vs 12,952; Purchase → Repeat 20.8% vs 36.7%. Drift: Nov {Add to Cart, Purchase}; Dec {Product View, Purchase, Repeat Purchase}; Jan {Loyal Customer}.
+  Held-out Jan: accuracy 63.0% (all models) vs baseline 54.7%; log-loss adaptive 0.9611, frozen 0.9730, baseline 1.2081.
+  Caveats: event-level chain (Cart → Cart 64%, Cart → Purchase 1.1%) so Electronics lever sizes do not transfer; possible left-censoring inflates early repeat rates.
+
 If a change moves these, find out why before accepting it. Report results honestly: on Electronics the
 adaptive gain in next-step accuracy is small; the larger effect is in scenario/optimiser forecasts.
 
@@ -78,8 +83,7 @@ adaptive gain in next-step accuracy is small; the larger effect is in scenario/o
 
 ## 6. Still to do (not code)
 
-- Run the Cosmetics dataset once (put the CSVs in `data/raw/cosmetics/`) and record its numbers; it becomes the
-  generalisation comparison with Electronics.
+- Cosmetics has been run and recorded (§4); the report's §6.2 holds the write-up and caveats.
 - Report, slides and the "formulas explained simply" notes for teammates. Slide fixes still pending: slide 6
   "never" → "not found in the reviewed literature"; slides 9–10 "steady-state" → "absorption analysis";
   slide 9 "Real dataset" box → "REES46 Electronics (Kaggle)"; recommendation box → "AI advisor (Claude + offline analyst)".

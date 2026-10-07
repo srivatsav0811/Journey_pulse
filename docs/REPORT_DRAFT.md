@@ -3,7 +3,7 @@
 **Group 12, 23MAT204 Mathematics for Intelligent Systems 3**
 Team: _(add names and roll numbers)_
 
-> **Status of this draft.** Method, design decisions, the synthetic result and the Electronics results are final: the Electronics numbers were reproduced from the raw REES46 file on 2026-10-07. §6.2 (Cosmetics) is a placeholder until that dataset has been run.
+> **Status of this draft.** Method, design decisions, the synthetic result and the Electronics results are final: the Electronics numbers were reproduced from the raw REES46 file on 2026-10-07. The Cosmetics results (§6.2) were run on 2026-10-07 and carry stated caveats.
 
 ---
 
@@ -80,7 +80,30 @@ Drift detected: November 2020 in Product View and Purchase; none in December; Ja
 **Honest reading.** On next-step prediction the adaptive gain over the frozen model is small, because real drift in this store is slow. The larger effect is in forecasts: for a +3-point checkout scenario the frozen model under-states the outcome by about 19%, and for the optimiser's plan it under-states the payoff by about 16%.
 
 ### 6.2 Cosmetics (generalisation check)
-_To be completed after running the Cosmetics dataset (10% customer sample). Record: rows, customers, batches, drift states, live vs frozen revenue per 1,000 visitors, held-out accuracy and log-loss. State whether the Electronics conclusions (small accuracy gain, larger forecast effect) hold._
+REES46 Cosmetics shop, October 2019 to February 2020, **10% customer sample** (`user_id % 10 == 0`), same settings as Electronics (churn 30 days, loyal at 3 orders). Run on 2026-10-07.
+
+**Data.** 2,061,436 sampled rows; 108,484 duplicates (5.3%, far more than Electronics) and 404 null-session rows removed; 164,284 customers; 455,341 sessions; 15,681 orders; 11,175 buyers (2,399 with 2+ orders, 929 with 3+); average order value 40.61. 1,415,837 of 1,719,295 transitions used; batches Oct 2019 (400,588), Nov (395,886), Dec (297,932), Jan 2020 (321,431). Cart abandonment is 87%.
+
+| | Live (v3) | Frozen (v0) |
+|---|---|---|
+| Revenue per 1,000 visitors | 4,560 | 12,952 |
+| Visitor ever places an order | 6.7% | 7.8% |
+| First-time buyers who order again (Purchase → Repeat) | 20.8% | 36.7% |
+| Second order → Loyal | 49.4% | 65.0% |
+| Cart → Purchase (per cart event) | 1.1% | 1.0% |
+
+**Drift.** Nov 2019: Add to Cart, Purchase. Dec 2019: Product View, Purchase, Repeat Purchase. Jan 2020: Loyal Customer. This is more drift than Electronics.
+
+**Held-out January 2020** (321,431 transitions). Next-step accuracy is 63.0% for every model (frozen, pooled and all four adaptive strategies, because the most likely next state per row does not change) against 54.7% for the most-common-step baseline (54.0% vs 43.3% excluding the first click). Log-loss: adaptive 0.9611, pooled 0.9648, frozen 0.9730, baseline 1.2081. The adaptive gain over frozen in log-loss is 0.012, about four times the Electronics gain (0.003).
+
+**Scenario and optimiser.** A +3-point Cart → Purchase scenario takes live revenue from 4,560 to 9,373 per 1,000 visitors, but the frozen model would predict 28,516 (it **over**-states by about 204%; on Electronics the frozen model under-stated by about 19%). The optimiser (5-point budget, 3 per lever) puts 3 points on Cart → Purchase and 2 on Product View → Cart for both models, raising expected orders per visitor from 0.112 to 0.279 on the live matrix; the grid check agrees (on the frozen matrix SLSQP did not report success, and the grid result is the one used).
+
+**Comparison with Electronics.** The qualitative conclusion carries over: accuracy barely moves, log-loss improves slightly, and the forecasts differ a lot between live and frozen. The *direction* of the frozen model's error does not carry over (too low on Electronics, too high on Cosmetics), so the claim should be that a frozen model is wrong, not that it is wrong in a fixed direction.
+
+**Cautions specific to this dataset (be explicit about these in the viva).**
+1. *Event-level granularity.* With 564k cart events the chain has a 64% Add to Cart self-loop and Cart → Purchase of only 1.1% per step, so "+3 points" is a near-fourfold relative change and the cart row has only 3 points of headroom. The Electronics default lever sizes do not transfer; Cosmetics scenario values should be read as relative effects, not forecasts.
+2. *Left-censoring.* Data start in October 2019, so many "first orders" in the first batch are probably returning customers. That could inflate early Purchase → Repeat (36.7%) and exaggerate the live-versus-frozen gap. We have not tested this; it needs earlier data or a first-order-only cohort.
+3. *One 10% sample.* Not repeated with other samples.
 
 ### 6.3 Synthetic data with planted drift
 Drift is flagged in exactly one row (Add to Cart) in the first February batch, α for that row rises to 0.80, and the live Cart → Purchase estimate rises from about 36% to 52.9% (truth 50%) while the frozen model stays at 36%.
