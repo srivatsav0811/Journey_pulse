@@ -102,12 +102,20 @@ def test_real_electronics_data_if_present():
     assert 150 < ds.aov < 300
 
 
-def test_synthetic_dataset_is_found_without_a_raw_data_folder(tmp_path, monkeypatch):
+def test_synthetic_dataset_is_found_without_a_raw_data_folder():
     # regression: a fresh clone has no data/raw/, and glob could not resolve "raw/../synthetic"
+    import tempfile
+    from pathlib import Path
     from backend import config
     from backend.data import preprocess
-    (tmp_path / "synthetic").mkdir()
-    (tmp_path / "synthetic" / "synthetic_customer_events.csv").write_text("x\n")
-    monkeypatch.setattr(config, "RAW_DIR", tmp_path / "raw")          # does not exist
-    files = preprocess._files("synthetic")
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / "synthetic").mkdir()
+        (root / "synthetic" / "synthetic_customer_events.csv").write_text("x\n")
+        old = config.RAW_DIR
+        config.RAW_DIR = root / "raw"          # does not exist, like a fresh clone
+        try:
+            files = preprocess._files("synthetic")
+        finally:
+            config.RAW_DIR = old
     assert [f.name for f in files] == ["synthetic_customer_events.csv"]
