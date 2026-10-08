@@ -279,10 +279,11 @@ Use the Electronics dataset.
 3. **What-if simulator** → click *Checkout +3 pts*. The *snapshot error* is 0% because only October is known.
 4. Click **Next month** three times. After each month a message tells you which stages drifted. The what-if result updates by itself and the snapshot error grows (about −19% by January). *This is the whole idea in one screen.*
 5. **Adaptive engine.** See the month cards, the drift-test table (corrected p-values, size of shift, α actually applied) and the tracking chart. Switch the **Dataset** to Synthetic to watch the model follow a planted jump from 35% to 50% while the frozen model stays flat.
-6. **Journey map.** The live transition matrix as a heatmap; switch between live, frozen, month-only and change-since-frozen.
-7. **Budget optimiser.** Best split of a 5-point improvement budget across four levers, for the live and frozen models, verified against a brute-force grid search.
-8. **Next best actions**, **Prediction** (where a customer is likely to be in *k* steps) and **AI advisor**. Ask *"Where are we losing the most customers?"*.
-9. **Model quality.** Be upfront that adaptive beats frozen only slightly on next-click prediction; the bigger effect is on forecasts.
+6. **Datasets.** Open the *Datasets* page to see where the data comes from, its size and period, how it was sampled and cleaned, and a side-by-side table of all three datasets.
+7. **Journey map.** The live transition matrix as a heatmap; switch between live, frozen, month-only and change-since-frozen.
+8. **Budget optimiser.** Best split of a 5-point improvement budget across four levers, for the live and frozen models, verified against a brute-force grid search.
+9. **Next best actions**, **Prediction** (where a customer is likely to be in *k* steps) and **AI advisor**. Ask *"Where are we losing the most customers?"*.
+10. **Model quality.** Be upfront that adaptive beats frozen only slightly on next-click prediction; the bigger effect is on forecasts.
 
 The sun/moon button switches between light and dark themes.
 
@@ -391,7 +392,7 @@ How it fits together:
 | `scripts/build_static_site.py` | Builds `site/`: the frontend, the backend `.py` files, and `data/datasets.json` |
 | `scripts/deploy_pages.sh` | Builds and pushes `site/` to the `gh-pages` branch |
 
-**What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (about 0.25 MB in total). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to the REES46 licence (CC BY-NC-SA 4.0); attribution is shown in the app.
+**What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (about 0.25 MB in total). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to their original terms (Kaggle lists both REES46 datasets as "Data files © Original Authors"); attribution is shown in the app on the Datasets page. Publishing only aggregated counts is a judgement call: check the Kaggle pages and, if in doubt, deploy with only the synthetic dataset.
 
 **Rebuild and redeploy** (needs the datasets under `data/raw/` for the real ones to be included):
 
@@ -425,7 +426,7 @@ Then in GitHub: Settings → Pages → Source: *Deploy from a branch* → `gh-pa
 
 ## D2. Data and licence
 
-Data: REES46 Marketing Platform (rees46.com), via Kaggle (mkechinov), published under **CC BY-NC-SA 4.0** (attribution, non-commercial, share-alike). The datasets are **not included** in this repository; download them from Kaggle as described in B4 and B5, and keep the attribution in any report or slides.
+Data: REES46 Marketing Platform (rees46.com), via Kaggle (mkechinov), published on Kaggle with the licence shown as **"Data files © Original Authors"** (check each dataset's Kaggle page for the current terms). The datasets are **not included** in this repository; download them from Kaggle as described in B4 and B5, and keep the attribution in any report or slides.
 
 ## D3. More documents
 

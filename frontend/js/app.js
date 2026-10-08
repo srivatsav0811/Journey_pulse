@@ -14,6 +14,7 @@ const VIEWS = [
   { id: "predict", title: "Prediction", sub: "Where a customer is likely to be in k steps", icon: "predict", group: "Decide" },
   { id: "advisor", title: "AI advisor", sub: "Ask business questions in plain words", icon: "advisor", group: "Decide" },
   { id: "validation", title: "Model quality", sub: "Held-out accuracy, calibration, and adaptive vs static", icon: "validation", group: "Trust" },
+  { id: "datasets", title: "Datasets", sub: "The data behind the model: source, size, period and terms", icon: "datasets", group: "Trust" },
   { id: "method", title: "Data & method", sub: "Dataset, state mapping, formulas and limitations", icon: "method", group: "Trust" },
 ];
 
@@ -22,7 +23,8 @@ const loaders = {
   adaptive: () => import("./views/adaptive.js"), whatif: () => import("./views/whatif.js"),
   optimize: () => import("./views/optimize.js"), actions: () => import("./views/actions.js"),
   predict: () => import("./views/predict.js"), advisor: () => import("./views/advisor.js"),
-  validation: () => import("./views/validation.js"), method: () => import("./views/method.js"),
+  validation: () => import("./views/validation.js"), datasets: () => import("./views/datasets.js"),
+  method: () => import("./views/method.js"),
 };
 
 let current = null, cleanup = null, renderToken = 0;

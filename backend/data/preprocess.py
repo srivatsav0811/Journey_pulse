@@ -60,7 +60,7 @@ REGISTRY = {
         "pattern": "cosmetics/*.csv",
         "sample_mod": 10,          # keep users with user_id % 10 == 0  (a 10% sample by customer)
         "source": "https://www.kaggle.com/datasets/mkechinov/ecommerce-events-history-in-cosmetics-shop",
-        "attribution": "Data: REES46 Marketing Platform (rees46.com), via Kaggle (mkechinov). CC BY-NC-SA 4.0.",
+        "attribution": "Data: REES46 Marketing Platform (rees46.com), via Kaggle (mkechinov).",
     },
     "synthetic": {
         "label": "Synthetic (planted drift)",

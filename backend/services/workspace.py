@@ -14,7 +14,7 @@ from typing import Dict, Optional
 import numpy as np
 
 from .. import config
-from ..data.preprocess import load_dataset, available_datasets
+from ..data.preprocess import load_dataset, available_datasets, REGISTRY as DATASET_SPECS
 from ..engine import actions, optimizer, simulator
 from ..engine.adaptive import AdaptiveModel, STRATEGIES, headline_kpis
 from ..engine.markov import (counts_from_pairs, to_matrix, absorption, evaluate, k_step,
@@ -231,7 +231,9 @@ class Workspace:
 
     # ----------------------------------------------------------------- method
     def method(self) -> Dict:
-        return _r({"dataset": self.name, "label": self.ds.label, "facts": self.ds.facts,
+        spec = DATASET_SPECS[self.name]        # source and attribution come from the registry, not from a cached dataset
+        facts = {**self.ds.facts, "source": spec["source"], "attribution": spec["attribution"]}
+        return _r({"dataset": self.name, "label": self.ds.label, "facts": facts,
                    "batches": [{"label": l, "transitions": int(c.sum())}
                                for l, c in zip(self.labels, self.batch_counts)],
                    "config": {"churn_days": config.CHURN_DAYS, "loyal_at": config.LOYAL_AT,

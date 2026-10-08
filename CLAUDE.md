@@ -32,7 +32,7 @@ All of the original build plan is done. 39 tests pass (`python tests/run_tests.p
 | Live model | `backend/services/workspace.py` | one per dataset; `live_matrix` is the single source of truth |
 | AI advisor | `backend/services/advisor.py` | Claude tool-use over urllib (key from env only) + offline analyst fallback |
 | API | `backend/api/routes.py`, `backend/server.py` | framework-free route functions; see README §4 |
-| Dashboard | `frontend/` | 10 views; flat minimal UI, light/dark; hand-drawn SVG charts (no CDN) |
+| Dashboard | `frontend/` | 11 views (incl. Datasets); flat minimal UI, light/dark; hand-drawn SVG charts (no CDN) |
 
 The mid-review files (`markov_engine.py`, `markov_engine_core.py`, `adaptive_engine.py`, `ai_assistant.py`,
 `app.py`, `demo_adaptive.py`) are superseded and not part of this repo. Their bugs are fixed here with
