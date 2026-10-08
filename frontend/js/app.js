@@ -158,7 +158,8 @@ async function initAdvisorMode() {
     const name = { claude: "Claude", groq: "Groq" }[state.health.advisor_mode];
     el.lastChild.textContent = name ? `Advisor: ${name} (${state.health.model})` : "Advisor: offline analyst";
     document.getElementById("drawer-mode").textContent = name
-      ? `${name}, with tools that compute on the live matrix` : "Offline analyst · set GROQ_API_KEY or ANTHROPIC_API_KEY";
+      ? `${name}, with tools that compute on the live matrix`
+      : window.JP_STATIC ? "Offline analyst · the browser demo has no API key" : "Offline analyst · set GROQ_API_KEY or ANTHROPIC_API_KEY";
   } catch { /* shown by the view error instead */ }
 }
 
@@ -185,8 +186,10 @@ async function main() {
     await initDatasets();
     await initAdvisorMode();
   } catch (err) {
-    viewEl.replaceChildren(h("section", { class: "glass card" }, h("h3", {}, "Can't reach the JourneyPulse server"),
-      h("p", { class: "muted" }, `${err.message}. Start it from the project folder with:  python -m backend.server`)));
+    viewEl.replaceChildren(h("section", { class: "glass card" }, h("h3", {}, window.JP_STATIC ? "The in-browser engine could not start" : "Can't reach the JourneyPulse server"),
+      h("p", { class: "muted" }, window.JP_STATIC
+        ? `${err.message}. The browser demo needs a modern browser and internet access to download the Python runtime; try reloading.`
+        : `${err.message}. Start it from the project folder with:  python -m backend.server`)));
     return;
   }
   window.addEventListener("hashchange", route);

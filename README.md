@@ -5,6 +5,8 @@ Srivatsav Reddy M · Chandramsuvu N · Rajneesh Samala · Sanjeev Singotam · Pr
 
 A web app that models how customers move through an online store as a **Markov chain**, and keeps that model **current**: every month of new data is tested for behaviour change ("drift"), and the model is updated more strongly only where behaviour really changed. On top of that live model sit a what-if simulator, a budget optimiser, next-best-action advice, and an AI business advisor.
 
+> **Try it without installing anything:** https://srivatsav0811.github.io/Journey_pulse/ is a browser demo. The Python engine runs inside your tab (first visit downloads about 21 MB of numpy/scipy/pandas, then it is cached). It includes all three datasets as aggregated transition counts, so the numbers match the full app. The hosted-model advisor is not available there (a browser cannot keep an API key secret), so the offline analyst answers.
+
 > **How to read this README.** Part A explains the project and shows the results. Part B is a step-by-step guide to run it yourself, including downloading the datasets and getting an API key. Parts C and D are reference material.
 
 ## Contents
@@ -180,7 +182,7 @@ Run the tests first:
 python tests/run_tests.py
 ```
 
-With both datasets present you should see `42 passed, 0 failed, 0 skipped`. Without a real dataset, the tests that need one are skipped, which is fine.
+With both datasets present you should see `45 passed, 0 failed, 0 skipped`. Without a real dataset, the tests that need one are skipped, which is fine.
 
 Then open **Overview** with the Electronics dataset selected and click the **last-month button (⏭)** in the top bar so the live model is **v3 · Jan 2021**. You should see:
 
@@ -309,7 +311,9 @@ Journey_pulse/
 │       └── advisor.py            AI advisor: Groq / Claude tool-use loop over HTTPS + offline analyst
 ├── frontend/                     no build step, no external libraries (works offline)
 │   ├── index.html, css/, js/     app shell, flat minimal UI, hand-drawn SVG charts, 10 views in js/views/
-├── tests/                        42 tests; run with pytest or `python tests/run_tests.py`
+├── demo/                         browser-demo plumbing (Pyodide worker, adapter for the API)
+├── scripts/                      build_static_site.py, deploy_pages.sh (GitHub Pages)
+├── tests/                        45 tests; run with pytest or `python tests/run_tests.py`
 ├── data/
 │   ├── synthetic/                included
 │   ├── raw/electronics/          you add events.csv  (git-ignored)
@@ -372,6 +376,32 @@ python -m pytest -q           # if pytest is installed
 ```
 
 The suite includes a regression test for every bug fixed from the mid-review code: drift false alarms (stable batches at most 10% flagged), α actually rising on drift, the advisor working with no API key, the Groq tool loop and fallback, clamped what-if shifts, absorption with an unobserved stage, no transitions across customers, and the optimiser matching a brute-force grid.
+
+## C5. The GitHub Pages browser demo
+
+GitHub Pages can only serve static files, so it cannot run `backend/server.py`. The demo instead runs the **real `backend/` package in the browser** using [Pyodide](https://pyodide.org) (Python compiled to WebAssembly, with numpy, scipy and pandas), in a Web Worker so the page stays responsive.
+
+How it fits together:
+
+| Piece | Role |
+|---|---|
+| `demo/jp_static.py` | Plays the part of `server.py`: answers the same `/api/*` calls by calling the same route functions |
+| `demo/worker.js`, `demo/static-api.js` | Boot Pyodide, load the backend files, and pass API calls between the page and Python |
+| `frontend/js/api.js` | When `window.JP_STATIC` is set, sends API calls to the worker instead of `fetch` |
+| `scripts/build_static_site.py` | Builds `site/`: the frontend, the backend `.py` files, and `data/datasets.json` |
+| `scripts/deploy_pages.sh` | Builds and pushes `site/` to the `gh-pages` branch |
+
+**What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (about 0.25 MB in total). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to the REES46 licence (CC BY-NC-SA 4.0); attribution is shown in the app.
+
+**Rebuild and redeploy** (needs the datasets under `data/raw/` for the real ones to be included):
+
+```bash
+PYTHON=.venv/bin/python ./scripts/deploy_pages.sh
+```
+
+Then in GitHub: Settings → Pages → Source: *Deploy from a branch* → `gh-pages` / `(root)`. To preview locally: `python scripts/build_static_site.py && python -m http.server 8200 --directory site`.
+
+**Limits of the demo:** the first visit takes a while (about 21 MB of downloads and a few seconds to start Python); each visitor has their own in-browser model (stream position resets on reload); and there is no hosted-model advisor.
 
 ---
 

@@ -18,7 +18,9 @@ export async function render(root) {
       h("strong", {}, mode ? `Connected to ${provider} (${state.health.model})` : "Running as the offline analyst"),
       h("p", { class: "tiny soft" }, mode
         ? `${provider} calls tools that compute on the live matrix; it never invents a number it didn't get from a tool.`
-        : "No API key is set, so a built-in analyst answers common questions from the same computations. Set GROQ_API_KEY (or ANTHROPIC_API_KEY) and restart the server to switch to a hosted model.")),
+        : (window.JP_STATIC
+          ? "This browser demo has no server, so a built-in analyst answers common questions from the same computations. Run the project locally with a Groq or Claude key to use a hosted model."
+          : "No API key is set, so a built-in analyst answers common questions from the same computations. Set GROQ_API_KEY (or ANTHROPIC_API_KEY) and restart the server to switch to a hosted model."))),
     h("p", { class: "tiny muted" }, "Rankings and numbers are computed by the model. Suggested tactics come from a rule-based playbook; treat them as starting points."));
   root.append(h("div", { class: "grid-2 advisor-grid" }, chatCard, side));
   mountChat(chatCard, { large: true });
