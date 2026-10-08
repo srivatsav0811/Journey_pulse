@@ -15,7 +15,7 @@ cp -R site/. "$tmp"/
   git init -q -b gh-pages
   git add -A
   git -c user.name="$name" -c user.email="$email" commit -q -m "Deploy browser demo"
-  git push -q -f "$remote" gh-pages
+  git -c credential.helper= -c credential.helper="!gh auth git-credential" push -q -f "$remote" gh-pages
 )
 rm -rf "$tmp"
 echo "Pushed to gh-pages. In GitHub: Settings -> Pages -> Deploy from branch gh-pages (root)."
