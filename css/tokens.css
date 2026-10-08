@@ -1,0 +1,118 @@
+/* ==========================================================================
+   Design tokens. Flat, neutral, one accent. Light is the default; dark is a
+   separately chosen set. Chart series colours are the validated palette:
+     series-1 = live model, series-2 = frozen snapshot, series-3 = month-only data
+   Text is never set in a series colour.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --sunken: #f4f4f2;
+  --line: #e6e5e1;
+  --line-strong: #d3d2cc;
+
+  --ink: #141414;
+  --ink-2: #4a4a47;
+  --ink-3: #85847f;
+  --hair: #ececE8;
+  --axis: #cfcec8;
+
+  --accent: #141414;           /* primary actions: plain ink, no colour */
+  --accent-ink: #ffffff;
+  --link: #1d5fd1;
+  --focus: #1d5fd1;
+
+  /* data */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --state-visitor: #4a3aa7;
+  --state-view: #2a78d6;
+  --state-cart: #1baf7a;
+  --state-purchase: #eda100;
+  --state-repeat: #eb6834;
+  --state-loyal: #e87ba4;
+  --state-exit: #9aa3b5;
+
+  --seq-0: #eef2f8;
+  --seq-1: #86b6ef;
+  --seq-2: #5598e7;
+  --seq-3: #3987e5;
+  --seq-4: #256abf;
+  --seq-5: #184f95;
+  --seq-6: #0d366b;
+  --div-neg: #e34948;
+  --div-mid: #f0efec;
+  --div-pos: #2a78d6;
+
+  /* status (reserved) */
+  --good: #0a8f0a;
+  --warning: #b97a00;
+  --critical: #c62828;
+  --up: #0a7a3a;
+  --down: #c62828;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0e;
+  --surface: #151516;
+  --sunken: #1b1b1d;
+  --line: #262628;
+  --line-strong: #38383b;
+
+  --ink: #ececea;
+  --ink-2: #b4b4b0;
+  --ink-3: #82827e;
+  --hair: #232325;
+  --axis: #3a3a3d;
+
+  --accent: #ececea;
+  --accent-ink: #111111;
+  --link: #6da7ec;
+  --focus: #6da7ec;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --state-visitor: #9085e9;
+  --state-view: #3987e5;
+  --state-cart: #199e70;
+  --state-purchase: #c98500;
+  --state-repeat: #d95926;
+  --state-loyal: #d55181;
+  --state-exit: #5b6478;
+
+  --seq-0: #1b2230;
+  --seq-1: #184f95;
+  --seq-2: #1c5cab;
+  --seq-3: #256abf;
+  --seq-4: #3987e5;
+  --seq-5: #6da7ec;
+  --seq-6: #b7d3f6;
+  --div-neg: #e66767;
+  --div-mid: #383835;
+  --div-pos: #3987e5;
+
+  --good: #3dc43d;
+  --warning: #e0a21a;
+  --critical: #ef6a6a;
+  --up: #3ddc84;
+  --down: #ff7b7b;
+}
