@@ -96,6 +96,44 @@ def _files(name: str) -> List[Path]:
     return sorted(Path(p) for p in glob.glob(os.path.normpath(str(config.RAW_DIR / spec["pattern"]))))
 
 
+def read_raw_head(name: str, n: int = 10) -> Optional[Dict]:
+    """The first n rows of a dataset's source file, as text (None when the file is not on this machine)."""
+    files = _files(name) if name in REGISTRY else []
+    if not files:
+        return None
+    df = pd.read_csv(files[0], nrows=n, dtype=str).fillna("")
+    return {"columns": list(df.columns), "rows": [[c[:60] for c in r] for r in df.values.tolist()],
+            "note": f"First {len(df)} rows of {files[0].name}"}
+
+
+def example_journeys(events: pd.DataFrame, n_per_kind: int = 3, max_steps: int = 12, seed: int = 11) -> List[Dict]:
+    """
+    A few real customers' step-by-step journeys (state names), chosen to show different outcomes.
+    Customers are anonymous integer codes; nothing but state names leaves this function.
+    """
+    if events is None or len(events) == 0:
+        return []
+    cust = events.customer.to_numpy()
+    uniq = np.unique(cust)
+    rng = np.random.default_rng(seed)
+    pick = rng.choice(uniq, size=min(len(uniq), 4000), replace=False)
+    sub = events[np.isin(cust, pick)]
+    kinds = [("Became a loyal customer", lambda q: IDX["Loyal Customer"] in q),
+             ("Ordered more than once", lambda q: IDX["Repeat Purchase"] in q),
+             ("Ordered once", lambda q: IDX["Purchase"] in q),
+             ("Added to cart but did not order", lambda q: IDX["Add to Cart"] in q),
+             ("Only browsed", lambda q: True)]
+    seqs = {c: g.state.to_numpy() for c, g in sub.groupby("customer", sort=True)}
+    used, out = set(), []
+    for title, test in kinds:
+        cands = [(len(q), c) for c, q in seqs.items() if c not in used and 3 <= len(q) <= max_steps and test(set(q.tolist()))]
+        cands.sort()
+        for _, c in cands[:n_per_kind]:
+            used.add(c)
+            out.append({"outcome": title, "steps": [STATES[k] for k in seqs[c].tolist()]})
+    return out
+
+
 def available_datasets() -> List[Dict]:
     out = []
     for name, spec in REGISTRY.items():
@@ -223,19 +261,24 @@ def transitions_from_events(events: pd.DataFrame) -> pd.DataFrame:
                          "src_time": t[:-1][same], "dst_time": t[1:][same]})
 
 
-def monthly_batches(tr: pd.DataFrame, start: pd.Timestamp, cutoff: pd.Timestamp) -> (pd.DataFrame, List[str]):
-    """Batch by the month of the source event; merge a short first/last month into its neighbour."""
+def monthly_batches(tr: pd.DataFrame, start: pd.Timestamp, cutoff: pd.Timestamp, freq: str = "M",
+                    min_days: Optional[int] = None) -> (pd.DataFrame, List[str]):
+    """
+    Batch by the calendar period (month "M" or week "W") of the source event; merge a short first/last
+    period into its neighbour. Weekly batches are for short uploads that span fewer than three months.
+    """
+    min_days = min_days if min_days is not None else (config.MIN_BATCH_DAYS if freq == "M" else 3)
     tr = tr.copy()
-    month = pd.to_datetime(tr.src_time).dt.to_period("M")
+    month = pd.to_datetime(tr.src_time).dt.to_period(freq)
     months = sorted(month.unique())
     if len(months) > 1:
         first, last = months[0], months[-1]
-        if (first.end_time - start).days + 1 < config.MIN_BATCH_DAYS:
+        if (first.end_time - start).days + 1 < min_days:
             month = month.where(month != first, months[1])
-        if (cutoff - last.start_time).days + 1 < config.MIN_BATCH_DAYS and len(months) > 2:
+        if (cutoff - last.start_time).days + 1 < min_days and len(months) > 2:
             month = month.where(month != last, months[-2])
     months = sorted(month.unique())
-    labels = [m.strftime("%b %Y") for m in months]
+    labels = [m.strftime("%b %Y") if freq == "M" else "Wk " + m.start_time.strftime("%d %b") for m in months]
     tr["batch"] = month.map({m: k for k, m in enumerate(months)}).astype(int).to_numpy()
     return tr, labels
 
@@ -250,14 +293,30 @@ def _load_rees46(name: str, spec: Dict, files: List[Path]) -> Dataset:
     raw["t"] = pd.to_datetime(raw.event_time.str.replace(" UTC", "", regex=False), format="%Y-%m-%d %H:%M:%S")
     raw["uid"] = pd.factorize(raw.user_id)[0]
     raw["sid"] = pd.factorize(raw.user_session)[0]
-    start, end = raw.t.min(), raw.t.max()
-    cutoff = end - pd.Timedelta(days=config.CHURN_DAYS)
+    return assemble_dataset(
+        name, spec["label"], raw, n_raw=n_raw, dups=dups, null_sess=null_sess,
+        sample_rule=f"user_id % {spec['sample_mod']} == 0" if spec["sample_mod"] else "full data",
+        sampled=bool(spec["sample_mod"]), source=spec["source"], attribution=spec["attribution"])
 
-    events = map_clickstream(raw, end)
+
+def assemble_dataset(name: str, label: str, raw: pd.DataFrame, *, n_raw: int, dups: int, null_sess: int,
+                     sample_rule: str, sampled: bool, source: str, attribution: str,
+                     churn_days: Optional[int] = None, loyal_at: Optional[int] = None, freq: str = "M",
+                     fallback_aov: float = SYNTHETIC_AOV, extra_facts: Optional[Dict] = None) -> Dataset:
+    """
+    Shared by the REES46 loaders and by uploaded files. `raw` needs columns t (datetime), event_type
+    (view / cart / remove_from_cart / purchase), price, uid and sid (integer codes).
+    """
+    churn_days = churn_days or config.CHURN_DAYS
+    loyal_at = loyal_at or config.LOYAL_AT
+    start, end = raw.t.min(), raw.t.max()
+    cutoff = end - pd.Timedelta(days=churn_days)
+
+    events = map_clickstream(raw, end, churn_days, loyal_at)
     tr = transitions_from_events(events)
     n_all = len(tr)
     tr = tr[tr.src_time <= cutoff]
-    tr, labels = monthly_batches(tr, start, cutoff)
+    tr, labels = monthly_batches(tr, start, cutoff, freq)
 
     # facts for the Data & Method page
     et = raw.event_type.astype(str)
@@ -277,15 +336,15 @@ def _load_rees46(name: str, spec: Dict, files: List[Path]) -> Dataset:
         "order_sessions_without_cart": int((sess.p & ~sess.c).sum()),
         "censored_share": float((last > cutoff).mean()),
         "transitions_total": n_all, "transitions_used": int(len(tr)),
-        "sampled": bool(spec["sample_mod"]),
-        "sample_rule": f"user_id % {spec['sample_mod']} == 0" if spec["sample_mod"] else "full data",
+        "sampled": sampled, "sample_rule": sample_rule,
         "state_counts": {STATES[k]: int(v) for k, v in events.state.value_counts().sort_index().items()},
-        "churn_days": config.CHURN_DAYS, "loyal_at": config.LOYAL_AT,
-        "source": spec["source"], "attribution": spec["attribution"],
+        "churn_days": churn_days, "loyal_at": loyal_at,
+        "source": source, "attribution": attribution,
     }
-    aov = float(orders.value.mean()) if len(orders) else SYNTHETIC_AOV
+    aov = float(orders.value.mean()) if len(orders) and float(orders.value.sum()) > 0 else float(fallback_aov)
     facts["aov"] = aov
-    return Dataset(name, spec["label"], events, tr, labels, aov, facts)
+    facts.update(extra_facts or {})
+    return Dataset(name, label, events, tr, labels, aov, facts)
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,9 @@ from one process, using only the Python standard library.
 
 import json
 import mimetypes
+import os
 import sys
+import tempfile
 import time
 import threading
 import traceback
@@ -25,6 +27,7 @@ from .services.workspace import Registry
 
 REGISTRY = Registry()
 MAX_BODY = 256 * 1024
+MAX_UPLOAD = 300 * 1024 * 1024        # a customer's own event log; kept in a temp file only while it is processed
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -88,7 +91,42 @@ class Handler(BaseHTTPRequestHandler):
             return self._api("GET")
         self._static()
 
+    def _upload(self):
+        """POST /api/upload?action=inspect|build&...: the body is the raw CSV file."""
+        url = urlparse(self.path)
+        query = {k: v[-1] for k, v in parse_qs(url.query).items()}
+        length = int(self.headers.get("Content-Length") or 0)
+        if query.get("action") != "remove":
+            if length <= 0:
+                return self._json(400, {"error": "no file received"})
+            if length > MAX_UPLOAD:
+                return self._json(413, {"error": f"file too large (limit {MAX_UPLOAD // (1024 * 1024)} MB)"})
+        fd, tmp = tempfile.mkstemp(suffix=".csv", prefix="journeypulse_")
+        try:
+            with os.fdopen(fd, "wb") as out:
+                left = length
+                while left > 0:
+                    block = self.rfile.read(min(1 << 20, left))
+                    if not block:
+                        break
+                    out.write(block)
+                    left -= len(block)
+            try:
+                self._json(200, ROUTES[("POST", "/api/upload")](REGISTRY, query, {"path": tmp}))
+            except ApiError as exc:
+                self._json(exc.status, {"error": exc.message})
+            except Exception as exc:
+                traceback.print_exc()
+                self._json(500, {"error": f"{type(exc).__name__}: {exc}"})
+        finally:
+            try:
+                os.remove(tmp)                  # the uploaded file is never kept
+            except OSError:
+                pass
+
     def do_POST(self):
+        if urlparse(self.path).path == "/api/upload":
+            return self._upload()
         if self.path.startswith("/api/"):
             return self._api("POST")
         self._json(405, {"error": "POST only on /api/"})

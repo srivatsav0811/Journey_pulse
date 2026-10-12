@@ -74,6 +74,8 @@ def test_every_route_returns_strict_json():
             b["messages"] = [{"role": "user", "content": "what if checkout improves by 5 points"}]
         if path == "/api/stream":
             b["action"] = "latest"
+        if path == "/api/upload":
+            b["action"] = "remove"          # inspect/build need a file; they are covered in test_custom_upload.py
         json.dumps(fn(REG, q, b), allow_nan=False)
 
 

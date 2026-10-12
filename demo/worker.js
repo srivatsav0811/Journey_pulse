@@ -5,11 +5,12 @@ const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
 
 const here = (p) => new URL(p, self.location).href;
 const status = (text) => postMessage({ type: "status", text });
-let jp = null;
+let jp = null, py = null, lastFile = null;
 
 async function init() {
   status("Downloading the Python runtime…");
   const pyodide = await loadPyodide({ indexURL: PYODIDE });
+  py = pyodide;
   status("Loading numpy, scipy and pandas (first visit only, then cached)…");
   await pyodide.loadPackage(["numpy", "scipy", "pandas"]);
   status("Loading the JourneyPulse engine…");
@@ -32,8 +33,14 @@ const ready = init().catch((err) => postMessage({ type: "fatal", error: String(e
 onmessage = async (e) => {
   await ready;
   if (!jp) return;
-  const { id, method, path, query, body } = e.data;
+  const { id, method, path, query, file } = e.data;
+  let { body } = e.data;
   try {
+    if (file) {                         // a file the visitor chose: it stays in this tab's memory
+      const key = `${file.name}:${file.size}:${file.lastModified}`;
+      if (key !== lastFile) { py.FS.writeFile("/tmp/upload.csv", new Uint8Array(await file.arrayBuffer())); lastFile = key; }
+      body = { ...(body || {}), path: "/tmp/upload.csv" };
+    }
     postMessage({ id, result: JSON.parse(jp.handle(method, path, JSON.stringify(query || {}), JSON.stringify(body || {}))) });
   } catch (err) {
     postMessage({ id, result: { status: 500, data: { error: String(err && err.message || err) } } });

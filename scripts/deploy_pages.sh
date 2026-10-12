@@ -4,7 +4,7 @@
 # Only aggregated transition counts are published, never raw events.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-"${PYTHON:-python3}" scripts/build_static_site.py
+"${PYTHON:-python3}" scripts/build_static_site.py "$@"
 remote=$(git remote get-url origin)
 name=$(git config user.name || echo "JourneyPulse")
 email=$(git config user.email || echo "noreply@example.com")

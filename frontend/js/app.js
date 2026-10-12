@@ -5,6 +5,7 @@ import { h, ICONS, toast, hideTip } from "./ui.js";
 import { mountChat, rerenderChats } from "./chat.js";
 
 const VIEWS = [
+  { id: "upload", title: "Your data", sub: "Upload your own customer activity and get the same analysis", icon: "upload", group: "Start here" },
   { id: "overview", title: "Overview", sub: "The customer journey at a glance", icon: "overview", group: "Insight" },
   { id: "journey", title: "Journey map", sub: "Transition probabilities between every stage", icon: "journey", group: "Insight" },
   { id: "adaptive", title: "Adaptive engine", sub: "Drift tests and per-stage update weights, month by month", icon: "adaptive", group: "Insight" },
@@ -23,7 +24,7 @@ const loaders = {
   adaptive: () => import("./views/adaptive.js"), whatif: () => import("./views/whatif.js"),
   optimize: () => import("./views/optimize.js"), actions: () => import("./views/actions.js"),
   predict: () => import("./views/predict.js"), advisor: () => import("./views/advisor.js"),
-  validation: () => import("./views/validation.js"), datasets: () => import("./views/datasets.js"),
+  upload: () => import("./views/upload.js"), validation: () => import("./views/validation.js"), datasets: () => import("./views/datasets.js"),
   method: () => import("./views/method.js"),
 };
 
@@ -133,6 +134,12 @@ function initStream() {
 }
 
 // ---------------------------------------------------------------- datasets
+function fillDatasetSelect() {
+  const sel = document.getElementById("dataset-select");
+  sel.replaceChildren(...state.meta.datasets.map((d) => h("option", { value: d.name, disabled: !d.available || null,
+    selected: d.name === state.dataset || null }, d.available ? d.label : `${d.label} (not downloaded)`)));
+}
+
 async function initDatasets() {
   state.meta = await api("/api/datasets");
   const sel = document.getElementById("dataset-select");
@@ -140,8 +147,7 @@ async function initDatasets() {
   try { saved = localStorage.getItem("jp-dataset"); } catch { /* ignore */ }
   const avail = state.meta.datasets.filter((d) => d.available);
   state.dataset = avail.some((d) => d.name === saved) ? saved : state.meta.default;
-  sel.replaceChildren(...state.meta.datasets.map((d) => h("option", { value: d.name, disabled: !d.available || null,
-    selected: d.name === state.dataset || null }, d.available ? d.label : `${d.label} (not downloaded)`)));
+  fillDatasetSelect();
   sel.addEventListener("change", async () => {
     state.dataset = sel.value;
     try { localStorage.setItem("jp-dataset", sel.value); } catch { /* ignore */ }
@@ -151,6 +157,24 @@ async function initDatasets() {
   });
   await api("/api/timeline");          // sets state.live before the first render
 }
+
+/** Re-reads the dataset list (after an upload or removal) and falls back to the default if the chosen one is gone. */
+window.jpRefreshDatasets = async () => {
+  state.meta = await api("/api/datasets");
+  if (!state.meta.datasets.some((d) => d.name === state.dataset && d.available)) state.dataset = state.meta.default;
+  fillDatasetSelect();
+};
+
+/** Switches the whole dashboard to a dataset (used after an upload) and opens a page. */
+window.jpUseDataset = async (name, view = "overview") => {
+  await window.jpRefreshDatasets();
+  state.dataset = name;
+  fillDatasetSelect();
+  state.live = null;                   // force every page to treat this as a new model
+  await api("/api/timeline");
+  rerenderChats();
+  if (location.hash === `#/${view}`) route(); else location.hash = `#/${view}`;
+};
 
 async function initAdvisorMode() {
   try {

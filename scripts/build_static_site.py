@@ -9,7 +9,8 @@ Builds the GitHub Pages demo into site/ (git-ignored):
                                   No raw events, user ids or sessions are published.
 
 Run from the project root (needs the datasets you want to publish under data/raw/):
-    python scripts/build_static_site.py
+    python scripts/build_static_site.py                  # aggregated counts only (synthetic also gets sample rows)
+    python scripts/build_static_site.py --real-samples   # also 10 raw rows + example journeys of the REES46 data
 """
 
 import json
@@ -22,7 +23,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from backend.data.preprocess import available_datasets, load_dataset   # noqa: E402
+from backend.data.preprocess import available_datasets, load_dataset, read_raw_head, example_journeys   # noqa: E402
 from backend.engine.markov import counts_from_pairs                     # noqa: E402
 
 SITE = ROOT / "site"
@@ -43,15 +44,21 @@ def jsonable(x):
     return x
 
 
-def dataset_bundle(name):
+def dataset_bundle(name, real_samples=False):
+    """real_samples: also publish 10 raw rows and a few example journeys of the REES46 datasets (off by default)."""
     ds = load_dataset(name)
     tr = ds.transitions
     counts = [counts_from_pairs(g.a.to_numpy(), g.b.to_numpy()) for _, g in tr.groupby("batch", sort=True)]
-    return {"label": ds.label, "labels": list(ds.batch_labels), "aov": float(ds.aov),
-            "facts": jsonable(ds.facts), "batch_counts": [c.astype(int).tolist() for c in counts]}
+    out = {"label": ds.label, "labels": list(ds.batch_labels), "aov": float(ds.aov),
+           "facts": jsonable(ds.facts), "batch_counts": [c.astype(int).tolist() for c in counts]}
+    if real_samples or name == "synthetic":      # the synthetic data is ours; third-party rows only on request
+        out["sample"] = read_raw_head(name, 10)
+        out["journeys"] = example_journeys(ds.events)
+    return out
 
 
 def main():
+    real_samples = "--real-samples" in sys.argv
     SITE.mkdir(exist_ok=True)
     for child in SITE.iterdir():                  # empty the folder but keep it (a dev server may be serving it)
         shutil.rmtree(child) if child.is_dir() else child.unlink()
@@ -86,7 +93,7 @@ def main():
     bundle = {}
     for d in available_datasets():
         if d["available"]:
-            bundle[d["name"]] = dataset_bundle(d["name"])
+            bundle[d["name"]] = dataset_bundle(d["name"], real_samples)
             print(f"  {d['name']}: {len(bundle[d['name']]['batch_counts'])} batches")
     (SITE / "data").mkdir()
     (SITE / "data" / "datasets.json").write_text(json.dumps(bundle, separators=(",", ":")))

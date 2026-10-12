@@ -25,7 +25,8 @@ export async function render(root) {
         h("span", { class: "muted" }, ` vs frozen ${live.frozen_label} model (${money(f.revenue_per_1k)})`))),
     h("div", { class: "row gap8 wrap" },
       h("a", { class: "btn btn-primary", href: "#/whatif" }, "Run a what-if"),
-      h("a", { class: "btn", href: "#/adaptive" }, "See how it adapts")));
+      h("a", { class: "btn", href: "#/adaptive" }, "See how it adapts"),
+      h("a", { class: "btn", href: "#/upload" }, "Use your own data")));
 
   // ---------------------------------------------------------------- KPI tiles
   const vs = (a, b, fmt) => h("span", {}, deltaSpan(a - b, fmt), h("span", { class: "muted" }, " vs frozen"));

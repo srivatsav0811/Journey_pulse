@@ -59,7 +59,10 @@ Four levers (Product page → Cart, Cart → First order, First order → Second
 ### 5.7 Optimiser
 Maximise expected orders (or P(loyal), or P(first order)) subject to a total budget and per-lever caps. The objective is non-linear through `(I − Q)^-1`, so we use SLSQP with several starts and verify against a brute-force grid search at 1-point steps.
 
-### 5.8 AI advisor
+### 5.8 Using the model on a business's own data
+The pipeline in 5.1 to 5.5 is not specific to REES46: an uploaded event log (customer, time, action, optional session and order value) is mapped to the same four action types and run through the same `assemble_dataset` code, with the business choosing the churn window and the loyalty threshold. Columns and actions are guessed and shown for confirmation; missing sessions are inferred from 30-minute gaps; very short histories are batched weekly rather than monthly. In the web demo the file is processed entirely in the visitor's browser. This makes the system usable beyond the two course datasets, but its output describes the business's own observational data and is not evidence that an intervention will cause a given lift.
+
+### 5.9 AI advisor
 Claude uses tool calls into the same engine functions, so every number it quotes comes from the live matrix. Without an API key an offline analyst answers from the same engine. The key is read only from the environment.
 
 ## 6. Results

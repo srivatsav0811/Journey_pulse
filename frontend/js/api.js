@@ -50,4 +50,27 @@ export async function api(path, { method = "GET", body, params } = {}) {
   return data;
 }
 
+/**
+ * Sends a CSV file to the backend. action: "inspect" (guess columns and actions), "build" (create the dataset)
+ * or "remove". In the GitHub Pages demo the file never leaves the browser: it is handed to the Python worker.
+ */
+export async function uploadCsv(file, action, { mapping, name } = {}) {
+  const params = { action, name: name || (file && file.name), mapping: mapping ? JSON.stringify(mapping) : undefined };
+  const query = Object.fromEntries(Object.entries(params).filter(([, v]) => v != null));
+  let ok, status, data;
+  if (window.JP_STATIC) {
+    const { call } = await import("./static-api.js");
+    ({ status, data } = await call("POST", "/api/upload", { query, file: action === "remove" ? undefined : file }));
+    ok = status === 200;
+  } else {
+    const url = new URL("/api/upload", window.location.origin);
+    Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v));
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/csv" }, body: action === "remove" ? undefined : file });
+    try { data = await res.json(); } catch { data = { error: `HTTP ${res.status}` }; }
+    ok = res.ok; status = res.status;
+  }
+  if (!ok) throw new Error((data && data.error) || `HTTP ${status}`);
+  return data;
+}
+
 export const lever = (id) => state.meta.levers.find((l) => l.id === id);

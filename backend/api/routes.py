@@ -21,9 +21,11 @@ handlers are unit-tested directly and served by backend/server.py.
     POST /api/advisor         {dataset, messages: [{role, content}]}
 """
 
+import json
 from typing import Dict
 
 from .. import config
+from ..data import custom
 from ..engine.adaptive import STRATEGIES
 from ..engine.optimizer import OBJECTIVES
 from ..engine.states import STATES, SHORT, LEVERS
@@ -157,6 +159,42 @@ def method(reg, q, b):
     return _ws(reg, q, b).method()
 
 
+def preview(reg, q, b):
+    return _ws(reg, q, b).preview(int(_num(q.get("rows", 10), 1, 50, "rows")))
+
+
+def upload(reg, q, b):
+    """
+    Bring-your-own-data. The transport layer (server.py, or the browser worker) saves the file and passes
+    its path in b["path"]; q has action = inspect | build | remove, plus name and mapping (JSON text).
+    """
+    action = q.get("action") or b.get("action")
+    if action == "remove":
+        return {"removed": reg.remove_custom()}
+    if action not in ("inspect", "build"):
+        raise ApiError(400, "action must be inspect, build or remove")
+    path = b.get("path")
+    if not path:
+        raise ApiError(400, "no file received")
+    try:
+        mapping = json.loads(q.get("mapping") or "{}")
+        if not isinstance(mapping, dict):
+            raise ValueError
+    except ValueError:
+        raise ApiError(400, "mapping must be a JSON object")
+    try:
+        if action == "inspect":
+            return custom.inspect_csv(path, mapping)
+        ds = custom.build_dataset(path, mapping, (q.get("name") or "your file")[:80])
+    except custom.UploadError as exc:
+        raise ApiError(400, str(exc))
+    reg.add_custom(ds)
+    f = ds.facts
+    return {"dataset": reg.CUSTOM, "label": ds.label, "batches": ds.batch_labels, "warnings": f.get("warnings", []),
+            "summary": {k: f.get(k) for k in ("customers", "sessions", "orders", "buyers", "rows_raw", "transitions_used",
+                                              "start", "end", "aov", "batch_unit", "churn_days", "loyal_at")}}
+
+
 def advise(reg, q, b):
     ws = _ws(reg, q, b)
     msgs = b.get("messages")
@@ -186,4 +224,6 @@ ROUTES: Dict = {
     ("GET", "/api/validation"): validation,
     ("GET", "/api/method"): method,
     ("POST", "/api/advisor"): advise,
+    ("GET", "/api/preview"): preview,
+    ("POST", "/api/upload"): upload,
 }

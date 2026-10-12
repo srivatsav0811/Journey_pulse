@@ -22,10 +22,11 @@ import numpy as np
 import pandas as pd
 
 from backend.api import routes
-from backend.data import preprocess
+from backend.data import custom, preprocess
 from backend.services import workspace
 
 _BUNDLE = {}
+custom.MAX_ROWS = 400_000       # a browser tab has far less memory than a server
 
 
 def _transitions_from_counts(batch_counts) -> pd.DataFrame:
@@ -48,9 +49,13 @@ def demo_load_dataset(name, use_cache=True):
     if name not in _BUNDLE:
         raise FileNotFoundError(f"The '{name}' dataset is not part of this browser demo.")
     d = _BUNDLE[name]
+    facts = dict(d["facts"])
+    for extra in ("sample", "journeys"):          # optional extras for the data viewer (see build_static_site.py)
+        if d.get(extra) is not None:
+            facts[extra] = d[extra]
     return preprocess.Dataset(name=name, label=d["label"], events=pd.DataFrame(),
                               transitions=_transitions_from_counts(d["batch_counts"]),
-                              batch_labels=d["labels"], aov=d["aov"], facts=d["facts"])
+                              batch_labels=d["labels"], aov=d["aov"], facts=facts)
 
 
 def demo_available_datasets():

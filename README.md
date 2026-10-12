@@ -5,7 +5,7 @@ Srivatsav Reddy M · Chandramsuvu N · Rajneesh Samala · Sanjeev Singotam · Pr
 
 A web app that models how customers move through an online store as a **Markov chain**, and keeps that model **current**: every month of new data is tested for behaviour change ("drift"), and the model is updated more strongly only where behaviour really changed. On top of that live model sit a what-if simulator, a budget optimiser, next-best-action advice, and an AI business advisor.
 
-> **Try it without installing anything:** https://srivatsav0811.github.io/Journey_pulse/ is a browser demo. The Python engine runs inside your tab (first visit downloads about 21 MB of numpy/scipy/pandas, then it is cached). It includes all three datasets as aggregated transition counts, so the numbers match the full app. The hosted-model advisor is not available there (a browser cannot keep an API key secret), so the offline analyst answers.
+> **Try it without installing anything:** https://srivatsav0811.github.io/Journey_pulse/ is a browser demo. The Python engine runs inside your tab (first visit downloads about 21 MB of numpy/scipy/pandas, then it is cached). It includes all three datasets as aggregated transition counts, so the numbers match the full app. The hosted-model advisor is not available there (a browser cannot keep an API key secret), so the offline analyst answers. **You can also upload your own customer data there** (see [Use your own data](#c6-use-your-own-data-business-users)); the file is processed inside your browser tab and never leaves it.
 
 > **How to read this README.** Part A explains the project and shows the results. Part B is a step-by-step guide to run it yourself, including downloading the datasets and getting an API key. Parts C and D are reference material.
 
@@ -182,7 +182,7 @@ Run the tests first:
 python tests/run_tests.py
 ```
 
-With both datasets present you should see `45 passed, 0 failed, 0 skipped`. Without a real dataset, the tests that need one are skipped, which is fine.
+With both datasets present you should see `54 passed, 0 failed, 0 skipped`. Without a real dataset, the tests that need one are skipped, which is fine.
 
 Then open **Overview** with the Electronics dataset selected and click the **last-month button (⏭)** in the top bar so the live model is **v3 · Jan 2021**. You should see:
 
@@ -279,11 +279,13 @@ Use the Electronics dataset.
 3. **What-if simulator** → click *Checkout +3 pts*. The *snapshot error* is 0% because only October is known.
 4. Click **Next month** three times. After each month a message tells you which stages drifted. The what-if result updates by itself and the snapshot error grows (about −19% by January). *This is the whole idea in one screen.*
 5. **Adaptive engine.** See the month cards, the drift-test table (corrected p-values, size of shift, α actually applied) and the tracking chart. Switch the **Dataset** to Synthetic to watch the model follow a planted jump from 35% to 50% while the frozen model stays flat.
-6. **Datasets.** Open the *Datasets* page to see where the data comes from, its size and period, how it was sampled and cleaned, and a side-by-side table of all three datasets.
+6. **Datasets.** Open the *Datasets* page to see where the data comes from, its size and period, how it was sampled and cleaned, and a side-by-side table of all datasets. At the bottom, **Look inside the data** shows the actual raw rows, a few real customers' journeys step by step, and the monthly counts the model learns from.
 7. **Journey map.** The live transition matrix as a heatmap; switch between live, frozen, month-only and change-since-frozen.
 8. **Budget optimiser.** Best split of a 5-point improvement budget across four levers, for the live and frozen models, verified against a brute-force grid search.
 9. **Next best actions**, **Prediction** (where a customer is likely to be in *k* steps) and **AI advisor**. Ask *"Where are we losing the most customers?"*.
 10. **Model quality.** Be upfront that adaptive beats frozen only slightly on next-click prediction; the bigger effect is on forecasts.
+
+**Your data** (top of the sidebar) lets you upload your own customer activity and get all of the above for your business: see [C6](#c6-use-your-own-data-business-users).
 
 The sun/moon button switches between light and dark themes.
 
@@ -300,6 +302,7 @@ Journey_pulse/
 │   ├── server.py                 HTTP server: serves /api/* and the frontend from one process
 │   ├── api/routes.py             the REST API as plain functions + input validation
 │   ├── data/preprocess.py        dataset registry, clickstream → states, censoring, monthly batches, cache
+│   ├── data/custom.py            bring-your-own-data: column guessing, action mapping, builds a Dataset from an uploaded CSV
 │   ├── engine/                   the maths (dataset-agnostic)
 │   │   ├── states.py             the 7 states and the 4 business levers
 │   │   ├── markov.py             MLE matrix, k-step prediction, absorption analysis, evaluation
@@ -311,10 +314,11 @@ Journey_pulse/
 │       ├── workspace.py          one live model per dataset; every analysis reads its live matrix
 │       └── advisor.py            AI advisor: Groq / Claude tool-use loop over HTTPS + offline analyst
 ├── frontend/                     no build step, no external libraries (works offline)
-│   ├── index.html, css/, js/     app shell, flat minimal UI, hand-drawn SVG charts, 10 views in js/views/
+│   ├── index.html, css/, js/     app shell, flat minimal UI, hand-drawn SVG charts, 12 views in js/views/
+│   └── sample/business_sample.csv  a fictional shop's event log for trying the upload (made by scripts/make_sample_csv.py)
 ├── demo/                         browser-demo plumbing (Pyodide worker, adapter for the API)
-├── scripts/                      build_static_site.py, deploy_pages.sh (GitHub Pages)
-├── tests/                        45 tests; run with pytest or `python tests/run_tests.py`
+├── scripts/                      build_static_site.py, deploy_pages.sh (GitHub Pages), make_sample_csv.py
+├── tests/                        54 tests; run with pytest or `python tests/run_tests.py`
 ├── data/
 │   ├── synthetic/                included
 │   ├── raw/electronics/          you add events.csv  (git-ignored)
@@ -343,6 +347,8 @@ All responses are JSON. `dataset` defaults to Electronics (or the first availabl
 | POST | `/api/predict` | `state`, `steps` | next / k-step distribution, trajectory, most likely path |
 | GET | `/api/validation` | | held-out comparison and rolling month-ahead log-loss |
 | GET | `/api/method` | | dataset facts and mapping settings |
+| GET | `/api/preview` | `dataset`, `rows` | sample raw rows, example journeys and the monthly transition counts |
+| POST | `/api/upload` | query `action`: inspect · build · remove; `name`, `mapping` (JSON); body = the raw CSV | column guesses and preview / builds the `custom` dataset / removes it |
 | POST | `/api/advisor` | `messages`: [{role, content}] | reply, source (groq / claude / offline), tools used, suggestions |
 
 Levers: `view_to_cart`, `cart_to_purchase`, `purchase_to_repeat`, `repeat_to_loyal`. Each moves probability out of that stage's churn cell (clamped so no probability goes negative).
@@ -394,15 +400,50 @@ How it fits together:
 
 **What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (about 0.25 MB in total). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to their original terms (Kaggle lists both REES46 datasets as "Data files © Original Authors"); attribution is shown in the app on the Datasets page. Publishing only aggregated counts is a judgement call: check the Kaggle pages and, if in doubt, deploy with only the synthetic dataset.
 
-**Rebuild and redeploy** (needs the datasets under `data/raw/` for the real ones to be included):
+**Rebuild and redeploy** (needs the datasets under `data/raw/` for the real ones to be included). By default the demo's data viewer shows raw rows and example journeys only for the synthetic dataset (it is ours); add `--real-samples` to also publish 10 raw rows and a few example journeys of the REES46 datasets, which is your call to make given their terms:
 
 ```bash
-PYTHON=.venv/bin/python ./scripts/deploy_pages.sh
+PYTHON=.venv/bin/python ./scripts/deploy_pages.sh                    # aggregated counts (+ synthetic rows)
+PYTHON=.venv/bin/python ./scripts/deploy_pages.sh --real-samples     # also 10 REES46 rows per dataset
 ```
 
 Then in GitHub: Settings → Pages → Source: *Deploy from a branch* → `gh-pages` / `(root)`. To preview locally: `python scripts/build_static_site.py && python -m http.server 8200 --directory site`.
 
 **Limits of the demo:** the first visit takes a while (about 21 MB of downloads and a few seconds to start Python); each visitor has their own in-browser model (stream position resets on reload); and there is no hosted-model advisor.
+
+## C6. Use your own data (business users)
+
+The **Your data** page turns a business's own customer activity into the same live model, what-if simulator, optimiser, recommendations and advisor that the built-in datasets get.
+
+**What your file needs.** One row per customer action, as a CSV:
+
+| Needed | Example column | Example value |
+|---|---|---|
+| Who (customer id) | `Customer` | `C1113` |
+| When (date and time) | `When` | `2026-01-06 05:37` |
+| What they did | `Action` | `Viewed product`, `Added to basket`, `Placed order` |
+| *Optional:* session id | `Session` | `s-8841` |
+| *Optional:* order value | `Order value` | `10.51` |
+
+You need roughly **three months** of history (about seven weeks at the very least with the default 30-day *lost* window, because the model needs three weeks left to learn from after that window) and a few thousand rows, because the model compares periods. Up to 3 million rows locally and about 400,000 in the web demo. A ready-made example is in `frontend/sample/business_sample.csv` (also behind the **Try the sample file** button).
+
+**The four steps on the page**
+
+1. **Choose your file** (or press *Try the sample file*).
+2. **Check how we read it.** The page guesses which column is the customer, the date, the action, the session and the order value, and what each action means (looked at a product, added to cart, removed from cart, bought something, or ignore). It shows the first rows and how the first date was read. Fix anything that is wrong. Day-first dates (31/01/2026) have a tick-box.
+3. **Two business settings:** after how many days of silence a customer counts as *lost* (default 30; use 90 or more for things people buy rarely) and from which order a customer is *loyal* (default 3). If your file has no order value column, enter an average order value.
+4. **Analyse my data.** The whole dashboard switches to your data (it appears in the sidebar's Dataset menu as "Your data (file name)"). The **Datasets** page shows how it was cleaned.
+
+**What happens to your data.** In the **web demo** the file is read and processed inside your browser tab (Python runs in the tab) and is **never uploaded anywhere**; closing the tab discards it. In the **local app** the file is sent only to the JourneyPulse program on your own computer, held in a temporary file while it is processed, then deleted; the resulting dataset lives in memory until you remove it or restart. Nothing is written to `data/`.
+
+**Honest limits.**
+- Sessions are inferred from 30-minute gaps when there is no session column.
+- If the file has **only purchases** (no browsing or cart actions) you still get repeat-purchase and loyalty results, but the product-page and checkout levers have nothing to work with, and the page says so.
+- With only two periods of history, the drift tests and validation are weak, and the page warns you.
+- The model is a first-order Markov chain on customer journeys: it describes behaviour in your data, it does not prove that a campaign will cause a given lift.
+- Order value is summed per visit; a customer who buys twice in one visit counts as one order.
+
+**For developers.** The upload goes through the same pipeline as the REES46 data (`preprocess.assemble_dataset`), so the reference numbers cannot differ between built-in and uploaded data. Guessing and building live in `backend/data/custom.py`; the routes are `POST /api/upload` and `GET /api/preview`; the front end is `frontend/js/views/upload.js`. Tests: `tests/test_custom_upload.py`.
 
 ---
 
@@ -423,6 +464,10 @@ Then in GitHub: Settings → Pages → Source: *Deploy from a branch* → `gh-pa
 | Sidebar still says "offline analyst" after adding a key | The server only reads the key at startup and only the launcher scripts load `.env`. Restart using `./run_mac_linux.sh` / `run_windows.bat`, or set the variable in the terminal first. Check there are no quotes or spaces around the key in `.env`. |
 | Reply says "Groq unavailable (HTTPError)" | Usually a retired model name (see B7: list models and set `GROQ_MODEL`), a mistyped or revoked key, or the rate limit. The answer is still given offline. |
 | `Permission denied: ./run_mac_linux.sh` | `chmod +x run_mac_linux.sh` |
+| Upload says it could not read the dates | Pick the right date column; tick *day first* if your dates look like 31/01/2026; text like "yesterday" cannot be read. |
+| Upload says none of your actions is a purchase | In step 2 mark the action that means a sale as *Bought something*. |
+| Upload says there is too little history | Export at least three months (about seven weeks is the bare minimum) or lower the *lost after* days. |
+| Upload is too large in the web demo | Use the local app, or filter to fewer customers (keep every row of each sampled customer). |
 
 ## D2. Data and licence
 

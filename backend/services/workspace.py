@@ -14,7 +14,8 @@ from typing import Dict, Optional
 import numpy as np
 
 from .. import config
-from ..data.preprocess import load_dataset, available_datasets, REGISTRY as DATASET_SPECS
+from ..data.preprocess import (load_dataset, available_datasets, REGISTRY as DATASET_SPECS, read_raw_head,
+                               example_journeys)
 from ..engine import actions, optimizer, simulator
 from ..engine.adaptive import AdaptiveModel, STRATEGIES, headline_kpis
 from ..engine.markov import (counts_from_pairs, to_matrix, absorption, evaluate, k_step,
@@ -40,9 +41,9 @@ def _r(x, d=6):
 
 
 class Workspace:
-    def __init__(self, name: str, strategy: str = config.DEFAULT_STRATEGY):
+    def __init__(self, name: str, strategy: str = config.DEFAULT_STRATEGY, ds=None):
         self.name = name
-        self.ds = load_dataset(name)
+        self.ds = ds if ds is not None else load_dataset(name)
         self.lock = threading.RLock()
         tr = self.ds.transitions
         self.batch_counts = [counts_from_pairs(g.a.to_numpy(), g.b.to_numpy())
@@ -231,32 +232,60 @@ class Workspace:
 
     # ----------------------------------------------------------------- method
     def method(self) -> Dict:
-        spec = DATASET_SPECS[self.name]        # source and attribution come from the registry, not from a cached dataset
-        facts = {**self.ds.facts, "source": spec["source"], "attribution": spec["attribution"]}
+        spec = DATASET_SPECS.get(self.name, {})      # source and attribution come from the registry, not a cached dataset
+        facts = {k: v for k, v in self.ds.facts.items() if k not in ("sample", "journeys")}
+        if spec:
+            facts.update({"source": spec["source"], "attribution": spec["attribution"]})
         return _r({"dataset": self.name, "label": self.ds.label, "facts": facts,
                    "batches": [{"label": l, "transitions": int(c.sum())}
                                for l, c in zip(self.labels, self.batch_counts)],
-                   "config": {"churn_days": config.CHURN_DAYS, "loyal_at": config.LOYAL_AT,
+                   "config": {"churn_days": facts.get("churn_days", config.CHURN_DAYS),
+                              "loyal_at": facts.get("loyal_at", config.LOYAL_AT),
                               "min_batch_days": config.MIN_BATCH_DAYS},
                    "unobserved": unobserved_states(np.sum(self.batch_counts, axis=0)),
                    "transient": [STATES[i] for i in TRANSIENT]})
 
+    # ---------------------------------------------------------------- preview
+    def journeys(self):
+        if getattr(self, "_journeys", None) is None:
+            self._journeys = self.ds.facts.get("journeys")
+            if self._journeys is None:
+                self._journeys = example_journeys(self.ds.events)
+        return self._journeys
+
+    def preview(self, rows: int = 10) -> Dict:
+        """What the data looks like: raw rows, example journeys, and the counts the model actually reads."""
+        sample = self.ds.facts.get("sample") or read_raw_head(self.name, rows)
+        counts = [{"label": l, "total": int(c.sum()), "matrix": c.astype(int).tolist()}
+                  for l, c in zip(self.labels, self.batch_counts)]
+        return _r({"dataset": self.name, "label": self.ds.label, "sample": sample, "journeys": self.journeys(),
+                   "states": STATES, "counts": counts})
+
 
 class Registry:
-    """Lazily-built workspaces, one per dataset, shared by all requests."""
+    """Lazily-built workspaces, one per dataset, shared by all requests. Also holds one uploaded dataset."""
+
+    CUSTOM = "custom"
 
     def __init__(self):
         self._ws: Dict[str, Workspace] = {}
         self._lock = threading.Lock()
 
     def datasets(self):
-        return available_datasets()
+        out = list(available_datasets())
+        ws = self._ws.get(self.CUSTOM)
+        if ws is not None:
+            out.append({"name": self.CUSTOM, "label": ws.ds.label, "available": True, "custom": True,
+                        "source": ws.ds.facts.get("source", "Your upload"), "files": [ws.ds.facts.get("file_name", "")]})
+        return out
 
     def default_name(self) -> str:
         avail = [d["name"] for d in available_datasets() if d["available"]]
         for pref in ("electronics", "cosmetics", "synthetic"):
             if pref in avail:
                 return pref
+        if self.CUSTOM in self._ws:
+            return self.CUSTOM
         raise FileNotFoundError("no dataset files found under data/")
 
     def get(self, name: Optional[str] = None) -> Workspace:
@@ -265,3 +294,14 @@ class Registry:
             if name not in self._ws:
                 self._ws[name] = Workspace(name)
             return self._ws[name]
+
+    def add_custom(self, ds) -> Workspace:
+        """Register an uploaded dataset under the fixed name 'custom' (a new upload replaces the old one)."""
+        ws = Workspace(self.CUSTOM, ds=ds)
+        with self._lock:
+            self._ws[self.CUSTOM] = ws
+        return ws
+
+    def remove_custom(self) -> bool:
+        with self._lock:
+            return self._ws.pop(self.CUSTOM, None) is not None

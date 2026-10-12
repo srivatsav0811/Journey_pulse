@@ -145,3 +145,17 @@ dl.facts a { color: var(--link); text-decoration: underline; text-underline-offs
 .chat-large .msg { max-width: 80%; }
 .mode-box { padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line); border-left: 3px solid var(--warning); background: var(--sunken); display: flex; flex-direction: column; gap: 4px; }
 .mode-box.on { border-left-color: var(--good); }
+
+/* ---------------- upload + data viewer ---------------- */
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 28px 16px; text-align: center; cursor: pointer;
+  border: 1.5px dashed var(--line-strong); border-radius: var(--radius); background: var(--sunken); }
+.drop:hover, .drop.over { border-color: var(--ink); background: var(--surface); }
+#jp-file:focus-visible + .drop { outline: 2px solid var(--focus); outline-offset: 2px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 8px; }
+.field select, .field input[type="number"] { height: 32px; padding: 0 10px; font-size: 13px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); min-width: 0; }
+table.mini th, table.mini td { padding: 6px 10px; font-size: 12px; }
+table.mini select { height: 28px; font-size: 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); }
+table.counts td:first-child { font-weight: 500; }
+.err { color: var(--critical); }
+.callout-inline.err { border-left-color: var(--critical); }
+.eyebrow + .table-wrap, .eyebrow + .form-grid { margin-top: 6px; }

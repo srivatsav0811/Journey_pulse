@@ -18,7 +18,7 @@ write "never been done" — write "not found in the reviewed literature".
 
 ## 2. Status: built and tested
 
-All of the original build plan is done. 39 tests pass (`python tests/run_tests.py`, or pytest).
+All of the original build plan is done. 54 tests pass (`python tests/run_tests.py`, or pytest).
 
 | Area | File | Notes |
 |---|---|---|
@@ -28,11 +28,12 @@ All of the original build plan is done. 39 tests pass (`python tests/run_tests.p
 | What-if | `backend/engine/simulator.py` | shifts clamped to headroom; always live vs frozen |
 | Optimiser | `backend/engine/optimizer.py` | SLSQP multi-start + batched brute-force grid check |
 | Next best actions | `backend/engine/actions.py` | computed ranking + labelled rule-based playbook |
-| Data | `backend/data/preprocess.py` | registry: electronics, cosmetics (untested, 10% customer sample), synthetic |
+| Data | `backend/data/preprocess.py` | registry: electronics, cosmetics (10% customer sample), synthetic; `assemble_dataset` is shared with uploads |
+| Own data | `backend/data/custom.py` | bring-your-own CSV: guess columns/actions, build via `assemble_dataset`; upload kept only in a temp file / browser memory |
 | Live model | `backend/services/workspace.py` | one per dataset; `live_matrix` is the single source of truth |
 | AI advisor | `backend/services/advisor.py` | Claude tool-use over urllib (key from env only) + offline analyst fallback |
 | API | `backend/api/routes.py`, `backend/server.py` | framework-free route functions; see README §4 |
-| Dashboard | `frontend/` | 11 views (incl. Datasets); flat minimal UI, light/dark; hand-drawn SVG charts (no CDN) |
+| Dashboard | `frontend/` | 12 views (incl. Datasets, Your data); flat minimal UI, light/dark; hand-drawn SVG charts (no CDN) |
 
 The mid-review files (`markov_engine.py`, `markov_engine_core.py`, `adaptive_engine.py`, `ai_assistant.py`,
 `app.py`, `demo_adaptive.py`) are superseded and not part of this repo. Their bugs are fixed here with
@@ -75,7 +76,8 @@ adaptive gain in next-step accuracy is small; the larger effect is in scenario/o
 
 - Every matrix must pass `assert_row_stochastic` after every update or shift.
 - Maths stays in `backend/engine/`; `workspace.py` wires it; routes validate input; the frontend only displays.
-- Dataset-specific code lives only in `preprocess.py`. Never pool datasets into one matrix.
+- Dataset-specific code lives only in `preprocess.py` (and `custom.py` for uploads). Never pool datasets into one matrix.
+- Uploaded files are never persisted: temp file deleted right after processing locally, browser memory only on GitHub Pages. Do not log their contents.
 - Frontend inserts data with `textContent` (the `h()` helper); only constant icon strings use innerHTML.
 - Chart colours: series-1 = live, series-2 = frozen, series-3 = month-only; text never in series colour.
 - Never hard-code or log an API key; never commit `data/raw/`, `data/processed/` or `.env`.

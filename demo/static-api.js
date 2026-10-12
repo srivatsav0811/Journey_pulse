@@ -20,12 +20,12 @@ function start() {
 }
 
 /** One API call. Resolves to {status, data}. */
-export async function call(method, path, { query, body } = {}) {
+export async function call(method, path, { query, body, file } = {}) {
   start();
   await ready;
   return new Promise((resolve) => {
     const id = nextId++;
     pending.set(id, resolve);
-    worker.postMessage({ id, method, path, query, body });
+    worker.postMessage({ id, method, path, query, body, file });
   });
 }
