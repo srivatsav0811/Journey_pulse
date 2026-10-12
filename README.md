@@ -3,9 +3,26 @@
 Group 12 · 23MAT204 Mathematics for Intelligent Systems 3
 Srivatsav Reddy M · Chandramsuvu N · Rajneesh Samala · Sanjeev Singotam · Pranav Senthil
 
-A web app that models how customers move through an online store as a **Markov chain**, and keeps that model **current**: every month of new data is tested for behaviour change ("drift"), and the model is updated more strongly only where behaviour really changed. On top of that live model sit a what-if simulator, a budget optimiser, next-best-action advice, and an AI business advisor.
+A web app that models how customers move through an online store as a **Markov chain**, and keeps that model **current**: every month of new data is tested for behaviour change ("drift"), and the model is updated more strongly only where behaviour really changed.
 
-> **Try it without installing anything:** https://srivatsav0811.github.io/Journey_pulse/ is a browser demo. The Python engine runs inside your tab (first visit downloads about 21 MB of numpy/scipy/pandas, then it is cached). It includes all three datasets as aggregated transition counts, so the numbers match the full app. The hosted-model advisor is not available there (a browser cannot keep an API key secret), so the offline analyst answers. **You can also upload your own customer data there** (see [Use your own data](#c6-use-your-own-data-business-users)); the file is processed inside your browser tab and never leaves it.
+**What you can do with it**
+
+- See where customers drop out of the journey (visit → product view → cart → purchase → repeat → loyal) and how that has **changed month by month**.
+- **Test a change before building it** (e.g. "what if checkout completion rises 3 points?") and see the answer next to what an out-of-date model would have said.
+- Find the **best use of a limited improvement budget** across the four levers, with a ranked playbook of next best actions.
+- **Ask an AI advisor** in plain words; every number it quotes is computed by the engine, not guessed.
+- **Look inside the data** (raw rows, real customer journeys, the monthly counts) and **upload your own customer data** to get all of the above for your business.
+
+| I want to… | Go to |
+|---|---|
+| Try it now, nothing to install | https://srivatsav0811.github.io/Journey_pulse/ (a browser demo; the Python runs in your tab) |
+| Use it on my own business data | the **Your data** page; guide in [C6](#c6-use-your-own-data-business-users) |
+| Run it myself, with the real datasets and an AI key | [Part B](#part-b-replicate-it-step-by-step) |
+| Understand the maths | [A1](#a1-the-idea-in-plain-words), [C3](#c3-method-in-detail) and `docs/FORMULAS_EXPLAINED.md` |
+
+**Status.** Built and tested (54 tests). The Electronics numbers reproduce from the raw Kaggle files and the Cosmetics run is recorded with its caveats in A3. Still open: the report and slides (see `docs/REMAINING_CHECKLIST.md`).
+
+The browser demo runs the real engine in the visitor's tab (first visit downloads about 21 MB of numpy/scipy/pandas, then it is cached). It includes the three datasets as aggregated transition counts, so its numbers match the full app. It has no hosted-model advisor (a browser cannot keep an API key secret), so the offline analyst answers. A file uploaded there is processed inside the tab and never leaves it.
 
 > **How to read this README.** Part A explains the project and shows the results. Part B is a step-by-step guide to run it yourself, including downloading the datasets and getting an API key. Parts C and D are reference material.
 
@@ -13,7 +30,7 @@ A web app that models how customers move through an online store as a **Markov c
 
 - **Part A: the project**: [The idea](#a1-the-idea-in-plain-words) · [What is new](#a2-what-is-new-stated-modestly) · [Results](#a3-results)
 - **Part B: replicate it**: [Prerequisites](#b0-what-you-need) · [1 Get the code](#b1-get-the-code) · [2 Install](#b2-install) · [3 First run](#b3-first-run-no-downloads-needed) · [4 Electronics data](#b4-download-the-electronics-dataset) · [5 Cosmetics data](#b5-download-the-cosmetics-dataset-optional) · [6 Verify](#b6-check-that-you-reproduce-our-numbers) · [7 AI advisor key](#b7-turn-on-the-ai-advisor-api-key) · [8 Tour](#b8-a-4-minute-tour-of-the-app)
-- **Part C: reference**: [Structure](#c1-project-structure) · [API](#c2-api) · [Method](#c3-method-in-detail) · [Tests](#c4-tests)
+- **Part C: reference**: [Structure](#c1-project-structure) · [API](#c2-api) · [Method](#c3-method-in-detail) · [Tests](#c4-tests) · [Browser demo](#c5-the-github-pages-browser-demo) · [Your own data](#c6-use-your-own-data-business-users)
 - **Part D**: [Troubleshooting](#d1-troubleshooting) · [Data licence](#d2-data-and-licence) · [More docs](#d3-more-documents)
 
 ---
@@ -79,6 +96,17 @@ Settings for all runs: churn = 30 days of inactivity, "loyal" = 3rd order or lat
 
 We generate data where Cart → Purchase jumps from 35% to 50% in February. The drift test flags exactly the Add to Cart row in the first February batch, α rises to 0.80, and the live estimate moves from 36% to 53% (truth 50%) while the frozen model stays at 36%. This shows the drift detector finds a known change.
 
+### Sample business file (fictional, for trying "Your data")
+
+`frontend/sample/business_sample.csv`: 8,688 rows, 1,400 customers, 318 orders over Jan to May 2026, with column and action names different from REES46 and a checkout improvement planted in mid-March. Uploaded with the default settings it gives 4 monthly periods and a live model that picks up the change.
+
+| | Live | Frozen |
+|---|---|---|
+| Revenue per 1,000 visitors | 10,008 | 7,505 |
+| Checkout completion (cart → order) | 36.8% | 27.9% |
+
+This is a demonstration of the upload flow on made-up data, not a result about any real shop.
+
 ---
 
 # Part B: replicate it step by step
@@ -132,7 +160,7 @@ This installs numpy, pandas, scipy and pytest. Nothing else is needed: the serve
 python -m backend.server --open
 ```
 
-Your browser opens at **http://127.0.0.1:8000**. In the sidebar, the **Dataset** menu will show "Synthetic (planted drift)" as available and the two real datasets as "not downloaded". Pick Synthetic and click around. Stop the server with `Ctrl+C`.
+Your browser opens at **http://127.0.0.1:8000**. In the sidebar, the **Dataset** menu will show "Synthetic (planted drift)" as available and the two real datasets as "not downloaded". Pick Synthetic and click around, or open **Your data** and press *Try the sample file*. Stop the server with `Ctrl+C`.
 
 > The server reads the port from the `PORT` environment variable (default 8000); it has no `--port` option. To use another port: `PORT=9000 python -m backend.server` (Mac/Linux) or `$env:PORT=9000; python -m backend.server` (PowerShell).
 
@@ -382,7 +410,7 @@ python tests/run_tests.py     # no extra packages needed
 python -m pytest -q           # if pytest is installed
 ```
 
-The suite includes a regression test for every bug fixed from the mid-review code: drift false alarms (stable batches at most 10% flagged), α actually rising on drift, the advisor working with no API key, the Groq tool loop and fallback, clamped what-if shifts, absorption with an unobserved stage, no transitions across customers, and the optimiser matching a brute-force grid.
+The suite includes a regression test for every bug fixed from the mid-review code: drift false alarms (stable batches at most 10% flagged), α actually rising on drift, the advisor working with no API key, the Groq tool loop and fallback, clamped what-if shifts, absorption with an unobserved stage, no transitions across customers, and the optimiser matching a brute-force grid. Other groups: the REES46 loader refactor, `tests/test_custom_upload.py` (column guessing, messy date and column formats, purchase-only exports, every friendly error, the upload and preview routes), `tests/test_static_demo.py` (the browser demo returns the same JSON as the full app, including for uploads), and a regression test that a fresh clone finds the synthetic data.
 
 ## C5. The GitHub Pages browser demo
 
@@ -394,11 +422,11 @@ How it fits together:
 |---|---|
 | `demo/jp_static.py` | Plays the part of `server.py`: answers the same `/api/*` calls by calling the same route functions |
 | `demo/worker.js`, `demo/static-api.js` | Boot Pyodide, load the backend files, and pass API calls between the page and Python |
-| `frontend/js/api.js` | When `window.JP_STATIC` is set, sends API calls to the worker instead of `fetch` |
-| `scripts/build_static_site.py` | Builds `site/`: the frontend, the backend `.py` files, and `data/datasets.json` |
+| `frontend/js/api.js` | When `window.JP_STATIC` is set, sends API calls (and uploaded files) to the worker instead of `fetch` |
+| `scripts/build_static_site.py` | Builds `site/`: the frontend, the backend `.py` files, and `data/datasets.json` (aggregated counts; for the synthetic dataset also sample rows and journeys) |
 | `scripts/deploy_pages.sh` | Builds and pushes `site/` to the `gh-pages` branch |
 
-**What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (about 0.25 MB in total). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to their original terms (Kaggle lists both REES46 datasets as "Data files © Original Authors"); attribution is shown in the app on the Datasets page. Publishing only aggregated counts is a judgement call: check the Kaggle pages and, if in doubt, deploy with only the synthetic dataset.
+**What is published:** only *aggregated* data: for each dataset, one 7×7 transition-count matrix per month, plus labels, average order value and summary facts (only about 7 KB for all three datasets; the whole site is under 1 MB). No raw events, user ids or sessions. Because the engine only ever reads those counts, the demo returns exactly the same JSON as the full app (`tests/test_static_demo.py` checks this). The datasets remain subject to their original terms (Kaggle lists both REES46 datasets as "Data files © Original Authors"); attribution is shown in the app on the Datasets page. Publishing only aggregated counts is a judgement call: check the Kaggle pages and, if in doubt, deploy with only the synthetic dataset.
 
 **Rebuild and redeploy** (needs the datasets under `data/raw/` for the real ones to be included). By default the demo's data viewer shows raw rows and example journeys only for the synthetic dataset (it is ours); add `--real-samples` to also publish 10 raw rows and a few example journeys of the REES46 datasets, which is your call to make given their terms:
 
